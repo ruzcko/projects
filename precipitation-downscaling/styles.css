@@ -649,3 +649,9 @@ section > .wrap > h2, section > .wrap-wide > h2 {
   .nav { padding-inline: 4px; }
   #toTop { right: 14px; bottom: 14px; width: 40px; height: 40px; }
 }
+
+/* The published copy shows its full name in the nav; it fits only on wide screens. */
+.nav.past-header .nav-brand:has(.nav-code-long) { max-width: 260px; }
+@media (max-width: 960px) {
+  .nav.past-header .nav-code.nav-code-long { display: none; }
+}
