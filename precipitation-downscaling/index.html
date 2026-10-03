@@ -74,14 +74,14 @@
       rainfall patterns. The original ERA5 model was trained using German radar observations to downscale hourly,
       24 km precipitation to 10-minute, 2 km fields. It can generate multiple rainfall realizations to represent
       uncertainty <a href="#ref1">[1]</a>.</p>
-    <p>For IND, the pretrained model is adapted to IFS total precipitation and further trained using Korean PEAK<sub>HSP</sub>
+    <p>For this project, the pretrained model is adapted to IFS total precipitation and further trained using Korean PEAK<sub>HSP</sub>
       targets. <b>SpateGAN-IFS</b> is the pretrained generator adapted to one IFS total-precipitation
       channel, without Korean fine-tuning. <b>SpateGAN-PEAK*</b> is the retained PEAK step-500 checkpoint.
       Here, <i>selected checkpoint</i> denotes the recorded project selection, not the highest score in every metric or
       superiority to CEDDAR. SpateGAN-KMA denotes the step-1,000 comparator; SpateGAN-PEAK-5k denotes the step-5,000 confirmation run. CEDDAR-PEAK denotes the selected epoch-19 B0 checkpoint. These short names are used in plots and tables.</p>
 
-    <div class="tw" data-caption="SpateGAN: the original ERA5 model against the IND adaptation."><table>
-      <thead><tr><th>Detail</th><th>Original model</th><th>IND adaptation</th></tr></thead>
+    <div class="tw" data-caption="SpateGAN: the original ERA5 model against our adaptation."><table>
+      <thead><tr><th>Detail</th><th>Original model</th><th>Our adaptation</th></tr></thead>
       <tbody>
         <tr><td>Input dataset / variables</td><td>ERA5 convective and large-scale precipitation</td><td>IFS total precipitation, one input channel</td></tr>
         <tr><td>Target dataset</td><td>German gauge-adjusted radar rainfall (RADKLIM-YW)</td><td>PEAK<sub>HSP</sub> rainfall prepared from KMA radar data</td></tr>
@@ -115,12 +115,12 @@
       coarse-resolution precipitation. Different samples produce an ensemble of possible rainfall fields. The original
       model downscales daily ERA5 precipitation at approximately 30 km to 2.5 km over Denmark, using the DANRA regional
       reanalysis as its reference <a href="#ref2">[2]</a>.</p>
-    <p>For IND, CEDDAR has been adapted to paired IFS and PEAK<sub>HSP</sub> data. The B0 configuration was trained from scratch.
+    <p>For this project, CEDDAR has been adapted to paired IFS and PEAK<sub>HSP</sub> data. The B0 configuration was trained from scratch.
       The full 1,518-forecast rainfall evaluation is complete; results below are separate from training and validation
       loss.</p>
 
-    <div class="tw" data-caption="CEDDAR: the released B0 configuration against the IND adaptation."><table>
-      <thead><tr><th>Detail</th><th>Original model</th><th>IND adaptation</th></tr></thead>
+    <div class="tw" data-caption="CEDDAR: the released B0 configuration against our adaptation."><table>
+      <thead><tr><th>Detail</th><th>Original model</th><th>Our adaptation</th></tr></thead>
       <tbody>
         <tr><td>Input dataset / variables</td><td>ERA5 precipitation</td><td>IFS precipitation</td></tr>
         <tr><td>Target dataset</td><td>DANRA regional reanalysis precipitation</td><td>PEAK<sub>HSP</sub> rainfall prepared from KMA radar data</td></tr>
@@ -166,7 +166,7 @@
       <li><b>PEAK<sub>HSP</sub>:</b> Korean radar rainfall prepared at 2 km spatial resolution, integrated into half-hour
         amounts and summed into three-hour amounts for CEDDAR.</li>
       <li><b>DI Cast 2 km:</b> satellite-derived rainfall aligned to the regional analysis grids for comparison. Its
-        product interpretation remains provisional; missing observations stay visible, and IND DI Cast is not treated
+        product interpretation remains provisional; missing observations stay visible, and DI Cast over Indonesia is not treated
         as ground truth.</li>
     </ul>
 
@@ -312,7 +312,7 @@
     <h4>Inference</h4>
     <div data-table="inference" data-caption="Inference cost measured on one V100."></div>
     <p class="tnote">Measured on one NVIDIA V100-SXM2 (32 GB), with three ensemble members and three timed repetitions
-      across the 12 selected KR and IND cases after warm-up. Times are mean plus or minus standard deviation; input
+      across the 12 selected Korean and Indonesian cases after warm-up. Times are mean plus or minus standard deviation; input
       preparation, transfers, file writing and visualization are excluded. One SpateGAN sample produces 48 half-hour
       fields over 24 hours; one CEDDAR sample produces a three-hour field, so a 24-hour case requires eight
       predictions. Output areas also differ, so these are current-configuration costs rather than a matched
@@ -442,8 +442,6 @@
     </ol>
   </div>
   <p class="rights">&copy; 2026 DI Lab, Inc. All rights reserved.</p>
-  <p class="rights disclaimer">G-26IND-A is an internal technical report. Results are preliminary, cover Korean
-    validation only, and are not a statement of operational performance. Not for distribution.</p>
 </footer>
 
 <button id="toTop" type="button" aria-label="Back to top">&#8593;</button>
