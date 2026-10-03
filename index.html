@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Projects · Rogelio Ruzcko Tobias</title>
+<meta name="description" content="Project pages and reports by Rogelio Ruzcko Tobias.">
+<link rel="canonical" href="https://ruzcko.com/projects/">
+<link rel="icon" href="https://ruzcko.com/favicon.svg" type="image/svg+xml">
+<style>
+  /* colours and type follow ruzcko.com */
+  :root { --ground: #F3EFE6; --ink: #292722; --muted: #716B61; --link: #1A4E8A; --link-hover: #10365F; --rule: #D7CFC1; }
+  @media (prefers-color-scheme: dark) {
+    :root { --ground: #15171A; --ink: #E6E6E3; --muted: #94948F; --link: #82ADE4; --link-hover: #A9C8EF; --rule: #2C2F34; }
+  }
+  body { margin: 0; background: var(--ground); color: var(--ink); font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; line-height: 1.5; }
+  main { max-width: 720px; margin: 0 auto; padding: 64px 24px 96px; }
+  .back { font-size: 15px; }
+  h1 { margin: 28px 0 32px; font-size: 32px; font-weight: 600; }
+  a { color: var(--link); text-decoration: none; }
+  a:hover { color: var(--link-hover); text-decoration: underline; }
+  ul { list-style: none; margin: 0; padding: 0; }
+  li { display: grid; grid-template-columns: 180px 1fr; gap: 20px; padding: 20px 0; border-top: 1px solid var(--rule); }
+  li:last-child { border-bottom: 1px solid var(--rule); }
+  li img { width: 180px; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 4px; display: block; }
+  .title { font-size: 18px; font-weight: 600; }
+  .meta { color: var(--muted); font-size: 15px; margin-top: 2px; }
+  @media (max-width: 560px) { li { grid-template-columns: 1fr; gap: 12px; } li img { width: 100%; } }
+</style>
+</head>
+<body>
+<main>
+  <a class="back" href="https://ruzcko.com/">← Rogelio Ruzcko Tobias</a>
+  <h1>Projects</h1>
+  <ul>
+    <li>
+      <a href="ind-rainfall-downscaling/"><img src="ind-rainfall-downscaling/preview.jpg" alt="Precipitation downscaling: a coarse IFS rainfall field beside the downscaled 2 km field over Korea"></a>
+      <div>
+        <a class="title" href="ind-rainfall-downscaling/">Precipitation Downscaling</a>
+        <div class="meta">SpateGAN and CEDDAR adapted to IFS forecasts and validated on Korean radar data</div>
+        <div class="meta">Technical report, DI Lab · 2026</div>
+      </div>
+    </li>
+  </ul>
+</main>
+</body>
+</html>

@@ -1,0 +1,651 @@
+:root {
+  --ink: #16181d;
+  --ink-2: #3d434e;
+  --ink-3: #6b7280;
+  --line: #e2e5ea;
+  --line-2: #eef0f4;
+  --bg: #ffffff;
+  --bg-2: #f7f8fa;
+  --page: #f4f7fb;
+  --card: #ffffff;
+  --surface: #fcfdfe;      /* nested panes: figures, viewers */
+  /* liquid glass: nav, its menu, and the up arrow */
+  --glass-bg: linear-gradient(180deg, rgba(255,255,255,.4), rgba(255,255,255,.16));
+  --glass-menu: rgba(255,255,255,.9);
+  --glass-edge: rgba(255,255,255,.7);
+  --glass-filter: blur(18px) saturate(190%) brightness(1.04);
+  --glass-shadow: inset 0 1px 1px rgba(255,255,255,.95), inset 0 -1px 1px rgba(255,255,255,.4),
+                  0 0 0 .5px rgba(16,24,40,.08), 0 8px 28px rgba(16,24,40,.10), 0 1px 3px rgba(16,24,40,.06);
+  --glass-sheen: linear-gradient(135deg, rgba(255,255,255,.55), rgba(255,255,255,0) 38%, rgba(255,255,255,0) 72%, rgba(255,255,255,.22));
+  --glass-pill: rgba(30,109,237,.12);
+  --glass-pill-edge: inset 0 1px 1px rgba(255,255,255,.75), 0 1px 3px rgba(16,24,40,.08);
+  --warn-ink: #5c3d00;
+  --band: #fffaf0;
+  --control: #ffffff;
+  --hero: #1a5cc8;        /* flat hero fill */
+  --rule: #1e6ded;        /* flat accent rule */
+  --shadow: 0 1px 2px rgba(16,24,40,.04), 0 10px 28px rgba(16,24,40,.05);
+  --accent: #1e6ded;
+  --accent-soft: #eef4fe;
+  --warn: #8a5a00;
+  --warn-soft: #fdf6e7;
+  --warn-line: #f0dfb6;
+  --measure: 760px;      /* centred reading column inside each card */
+  --maxw: 1120px;        /* one width for hero, nav, sections, footer */
+  --maxw-wide: 1120px;
+  --r: 12px;
+  --r-card: 24px;
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; scroll-padding-top: 96px; }
+
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font: 400 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4 { line-height: 1.25; font-weight: 600; letter-spacing: -0.012em; margin: 0; }
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
+.wrap-wide { max-width: var(--maxw-wide); margin: 0 auto; padding: 0 24px; }
+
+/* Prose, notes and tables sit in one centred reading column so every left and
+   right edge lines up. The case viewers opt out and use the full card, since
+   the card is wide precisely to give the tiles room. */
+section > .wrap > *,
+section > .wrap-wide > *,
+footer > .wrap > * { max-width: var(--measure); margin-inline: auto; }
+/* Only the interactive viewers and their colourbar break out of the reading
+   column; all other results content stays narrow. */
+section > .wrap > .viewer, section > .wrap-wide > .viewer { max-width: none; }
+
+/* Each section body is a card floating on the tinted page, RainODE style. */
+section > .wrap, section > .wrap-wide {
+  background: var(--card); border-radius: var(--r-card);
+  padding: 34px 30px; box-shadow: var(--shadow);
+}
+
+
+/* ---------- nav ---------- */
+.nav { position: sticky; top: 12px; z-index: 50; padding: 0 30px; }
+.nav-in {
+  display: flex; align-items: center; gap: 8px 18px; flex-wrap: wrap;
+  max-width: var(--maxw-wide); margin: 0 auto; padding: 10px 30px;
+  position: relative; isolation: isolate;
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-filter);
+  backdrop-filter: var(--glass-filter);
+  border: 1px solid var(--glass-edge);
+  border-radius: 999px; box-shadow: var(--glass-shadow);
+}
+/* the sheen: a soft highlight across the top-left and a faint one at the bottom-right */
+.nav-in::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit;
+  background: var(--glass-sheen); pointer-events: none;
+}
+.nav-code { font-weight: 650; font-size: 14px; letter-spacing: 0.02em; white-space: nowrap; padding-right: 4px; }
+.nav a {
+  color: var(--ink-2); font-size: 13.5px; white-space: nowrap;
+  padding: 6px 12px; border-radius: 999px; display: inline-flex; align-items: center; gap: 6px;
+}
+.nav a svg { width: 14px; height: 14px; flex: none; opacity: .75; }
+.nav a:hover { color: var(--ink); background: rgba(30,109,237,.07); text-decoration: none; }
+.nav a.is-active { color: var(--accent); background: var(--glass-pill); box-shadow: var(--glass-pill-edge); font-weight: 600; }
+.nav a.is-active svg { opacity: 1; }
+
+/* ---------- hero ---------- */
+.hero { text-align: center; padding: 22px 30px 8px; border-bottom: 0; }
+.hero > .wrap {
+  background: var(--hero); border-radius: var(--r-card);
+  padding: 52px 30px 44px; box-shadow: var(--shadow); color: #fff;
+  max-width: var(--maxw-wide);
+}
+.hero .kicker {
+  display: inline-block; text-transform: uppercase; letter-spacing: 0.14em;
+  font-size: 11.5px; font-weight: 600; color: #fff;
+  background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.34);
+  padding: 6px 15px; border-radius: 999px;
+}
+.hero h1 {
+  font-size: clamp(34px, 6vw, 52px);
+  letter-spacing: -0.03em; margin: 12px 0 8px;
+}
+.hero .byline { font-size: 17px; color: #fff; margin-top: 18px; font-weight: 500; }
+.hero .affil { font-size: 15px; color: rgba(255,255,255,.82); margin-top: 3px; }
+.hero .stamp { font-size: 13px; color: rgba(255,255,255,.72); margin-top: 16px; }
+
+/* ---------- sections ---------- */
+section { padding: 14px 30px; border-bottom: 0; }
+section > .wrap > h2, section > .wrap-wide > h2 { font-size: 24px; letter-spacing: -0.02em; }
+.lede { font-size: 17.5px; color: var(--ink-2); }
+h3 { font-size: 19px; margin: 30px 0 10px; }
+h4 { font-size: 16px; margin: 30px 0 10px; color: var(--ink-2); }
+
+
+.muted { color: var(--ink-3); }
+.small { font-size: 14px; }
+figure { margin: 26px 0; background: var(--surface); border: 1px solid var(--line-2);
+  border-radius: 18px; padding: 18px; }
+figure img { width: 100%; height: auto; border-radius: 10px; display: block; }
+figcaption { font-size: 13.5px; color: var(--ink-3); margin-top: 12px; text-align: center; }
+
+section.region-band > .wrap-wide {
+  background: var(--band);
+  border: 1px solid var(--warn-line);
+}
+.chip {
+  display: inline-block; font-size: 12px; font-weight: 600; letter-spacing: 0.04em;
+  text-transform: uppercase; padding: 4px 10px; border-radius: 999px;
+  background: var(--accent-soft); color: var(--accent); border: 1px solid #d6e4fb;
+}
+.chip-warn { background: var(--warn-soft); color: var(--warn); border-color: var(--warn-line); }
+
+.callout {
+  border: 1px solid var(--warn-line); background: var(--warn-soft);
+  border-radius: var(--r); padding: 16px 18px; margin: 22px 0;
+  font-size: 15px; color: var(--warn-ink);
+}
+.callout strong { color: #47300 0; }
+
+/* Justified prose, with hyphenation so the spacing stays even. */
+.lede, section p, .tnote, .callout, .todo, footer li {
+  text-align: justify; hyphens: auto;
+}
+figcaption, .slot p, .slot h4 { text-align: center; hyphens: none; }
+.panel-title, .viewer-meta, .clock, .cbar-note { hyphens: none; }
+.cbar-note { text-align: left; }
+
+/* ---------- tables ---------- */
+.tw { overflow-x: auto; margin: 18px 0; }
+table { border-collapse: collapse; width: auto; max-width: 100%; font-size: 13px;
+  margin-inline: auto; }   /* auto width keeps them tight, auto margin centres them */
+th, td { padding: 8px 14px; text-align: left; border-bottom: 1px solid var(--line-2); }
+th:first-child, td:first-child { padding-left: 0; }
+/* cells wrap freely; only numeric values stay unbroken so digits never split */
+td, th { overflow-wrap: break-word; }
+thead th {
+  font-size: 12px; font-weight: 600; color: var(--ink-2);
+  letter-spacing: 0.01em;                 /* no uppercasing: "mm/3 h" is a unit */
+  border-bottom: 1px solid var(--line);
+  white-space: normal; vertical-align: bottom;
+}
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+/* Let the model name wrap to two lines so the metric headers keep their room. */
+[data-summary] th:first-child, [data-summary] td:first-child { max-width: 11em; }
+.dir { color: var(--ink-3); font-weight: 500; }
+/* A bracketed qualifier or a unit moves to the next line whole, so a line
+   never breaks after "(" or inside "mm/3 h". */
+.nb { white-space: nowrap; }
+td.num { white-space: nowrap; }
+tbody tr.is-ref td { background: var(--surface); color: var(--ink-2); }
+tbody tr.is-best td { background: var(--accent-soft); }
+tbody tr.is-best td:first-child { font-weight: 600; }
+td .pending { color: #b6bcc6; }
+.tnote { font-size: 13.5px; color: var(--ink-3); margin-top: 10px; }
+
+/* ---------- todo ---------- */
+.todo {
+  font-size: 13.5px; color: var(--ink-3);
+  border-left: 2px solid var(--line); padding: 4px 0 4px 14px;
+  margin: 14px 0;
+}
+.todo b { color: var(--ink-2); font-weight: 600; }
+
+/* ---------- viewer ---------- */
+/* The case viewers sit in their own pane, like the figure blocks, so the
+   interactive results read as a distinct object rather than loose controls. */
+.viewer {
+  margin: 22px 0 8px; padding: 18px;
+  background: var(--surface); border: 1px solid var(--line-2); border-radius: 18px;
+}
+.viewer-bar {
+  display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center;
+  padding-bottom: 14px; border-bottom: 1px solid var(--line-2); margin-bottom: 16px;
+}
+.tabs { display: flex; gap: 4px; background: var(--bg-2); padding: 3px; border-radius: 7px; }
+.tabs button {
+  font: inherit; font-size: 13.5px; border: 0; background: none; cursor: pointer;
+  padding: 6px 13px; border-radius: 5px; color: var(--ink-3);
+}
+.tabs button:hover { color: var(--ink); }
+.tabs button[aria-selected="true"] {
+  background: var(--control); color: var(--ink); font-weight: 600;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.07), 0 0 0 1px var(--line);
+}
+.viewer-meta { font-size: 13.5px; color: var(--ink-3); margin-left: auto; }
+
+/* Tiles always stay on a single row and share the width equally. Subgrid keeps
+   every header and every map on a shared track, so panels stay aligned no
+   matter how a long model name wraps. Tiles shrink to fit rather than
+   scrolling, so the row is always complete on screen. */
+.panels {
+  display: grid; gap: 14px;
+  grid-template-rows: auto auto;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  overflow-x: auto; overflow-y: hidden;
+  padding-bottom: 6px;
+}
+.panel { min-width: 0; display: grid; grid-template-rows: subgrid; grid-row: span 2; }
+.panel-head { display: flex; align-items: baseline; gap: 8px; padding-bottom: 7px;
+  flex-wrap: wrap; align-content: flex-start; }
+.panel-title { font-size: 13.5px; font-weight: 600; }
+.panel-role { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-3); }
+.panel-role.role-target { color: #17803d; }
+.panel-role.role-input { color: var(--ink-3); }
+.panel-role.role-product { color: var(--warn); }
+.frame {
+  position: relative; aspect-ratio: 1; border: 1px solid var(--line);
+  border-radius: 12px; overflow: hidden; background: #f4f1e8 center / 100% 100% no-repeat;
+}
+.frame img {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  opacity: 0; transition: none;
+}
+.frame img.on { opacity: 1; }
+.frame .cadence {
+  position: absolute; right: 6px; bottom: 6px; z-index: 2;
+  font-size: 10.5px; font-weight: 600; letter-spacing: 0.03em;
+  background: rgba(255,255,255,0.82); color: var(--ink-2);
+  border: 1px solid var(--line); border-radius: 4px; padding: 1px 6px;
+}
+.panel.is-target .frame { border-color: #a7d8b8; box-shadow: 0 0 0 1px #a7d8b8; }
+
+/* controls */
+.controls { display: flex; align-items: center; gap: 14px; margin-top: 18px; }
+.btn {
+  font: inherit; font-size: 13.5px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--control); color: var(--ink);
+  border-radius: 6px; padding: 7px 12px; min-width: 40px;
+}
+.btn:hover { background: var(--bg-2); }
+.btn-play { font-weight: 600; min-width: 74px; }
+.scrub { flex: 1; accent-color: var(--accent); min-width: 160px; }
+.clock {
+  font-variant-numeric: tabular-nums; font-size: 13.5px; color: var(--ink-2);
+  white-space: nowrap; min-width: 172px; text-align: right;
+}
+.speed { font: inherit; font-size: 13px; border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; background: var(--control); }
+
+.loading { font-size: 13px; color: var(--ink-3); margin-top: 10px; height: 16px; }
+.loading .bar { display: inline-block; width: 120px; height: 4px; background: var(--line); border-radius: 2px; vertical-align: middle; margin-right: 8px; overflow: hidden; }
+.loading .bar i { display: block; height: 100%; background: var(--accent); width: 0; }
+
+/* extra layers */
+.layer-toggles { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line-2); font-size: 13.5px; color: var(--ink-2); }
+.layer-toggles label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.layer-toggles .hint { color: var(--ink-3); font-size: 13px; }
+
+/* colourbar */
+/* Sits inside the viewer pane but lines up with the reading column. Because
+   the pane spans the full card symmetrically, centring the bar inside the pane
+   lands its edges on exactly the same pixels as the prose and tables. */
+.cbar {
+  margin: 16px auto 0; padding-top: 14px;
+  border-top: 1px solid var(--line-2);
+  max-width: var(--measure);
+}
+.cbar-strip {
+  display: flex; height: 14px; border: 1px solid var(--line);
+  border-radius: 3px; overflow: hidden;
+}
+.cbar-strip i { flex: 1; }
+
+/* One tick per bin edge, sitting on the boundary between swatches. */
+.cbar-ticks { position: relative; height: 16px; margin-top: 4px; }
+.cbar-ticks span {
+  position: absolute; top: 0; transform: translateX(-50%);
+  font-size: 10px; color: var(--ink-3); font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.cbar-ticks span.is-first { transform: none; }
+.cbar-ticks span.is-last { transform: translateX(-100%); }
+
+.cbar-keys { display: flex; gap: 18px; margin-top: 10px; font-size: 12px; color: var(--ink-3); }
+.cbar-key { display: inline-flex; align-items: center; gap: 6px; }
+.cbar-key i { width: 12px; height: 12px; border: 1px solid var(--line); border-radius: 2px; }
+.cbar-key i.is-clear {
+  background: repeating-linear-gradient(45deg, var(--control) 0 3px, var(--line-2) 3px 6px);
+}
+.cbar-note { font-size: 13px; color: var(--ink-3); margin-top: 8px;
+  max-width: var(--measure); }
+
+/* placeholder slots */
+.slot {
+  border: 1px dashed var(--line); border-radius: var(--r);
+  background: repeating-linear-gradient(135deg, var(--surface) 0 10px, var(--bg-2) 10px 20px);
+  padding: 30px 24px; text-align: center; color: var(--ink-3); margin: 18px 0;
+}
+.slot h4 { margin: 0 0 6px; color: var(--ink-2); }
+.slot p { margin: 0 auto; font-size: 14px; max-width: 60ch; }
+
+footer { padding: 14px 30px 60px; font-size: 14px; color: var(--ink-3); }
+footer > .wrap { background: var(--card); border-radius: var(--r-card);
+  padding: 30px; box-shadow: var(--shadow); max-width: var(--maxw-wide); }
+
+#toTop {
+  position: fixed; right: 22px; bottom: 22px; z-index: 60;
+  width: 44px; height: 44px; border: 0; border-radius: 50%; cursor: pointer;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--rule) 66%, transparent), color-mix(in srgb, var(--rule) 44%, transparent));
+  color: #fff; font-size: 18px; line-height: 1; text-shadow: 0 1px 2px rgba(0,0,0,.25);
+  -webkit-backdrop-filter: blur(12px) saturate(180%); backdrop-filter: blur(12px) saturate(180%);
+  box-shadow: inset 0 1px 1px rgba(255,255,255,.65), inset 0 -2px 4px rgba(0,0,0,.08), 0 6px 18px rgba(16,24,40,.18);
+  opacity: 0; pointer-events: none; transition: opacity .18s ease, background .18s ease;
+}
+#toTop.show { opacity: 1; pointer-events: auto; }
+#toTop:hover, #toTop:focus-visible {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--rule) 88%, transparent), color-mix(in srgb, var(--rule) 70%, transparent));
+}
+footer ol { padding-left: 20px; }
+footer li { margin-bottom: 10px; }
+
+@media (max-width: 900px) {
+  .viewer-meta { margin-left: 0; width: 100%; }
+  .clock { min-width: 0; font-size: 12.5px; }
+}
+
+
+/* Indonesia keeps its own warm accent so the section reads as a different
+   kind of content, not just a differently coloured card. */
+
+/* Exhibit labels: tables numbered above, figures numbered below. */
+.table-label {
+  text-align: center; margin: 20px auto 9px; max-width: var(--measure);
+  font-size: 13px; font-weight: 400; color: var(--ink-3); hyphens: none;
+}
+.table-label b { font-weight: 600; color: var(--ink-2); letter-spacing: 0.02em; }
+.table-label + .tw { margin-top: 0; }
+
+/* ---------- dark theme ---------- */
+:root { color-scheme: light; }
+[data-theme="dark"] {
+  color-scheme: dark;
+  --ink: #e7ebf2;
+  --ink-2: #b7c0ce;
+  --ink-3: #8a94a4;
+  --line: #2b333f;
+  --line-2: #232a34;
+  --bg-2: #1b212a;
+  --page: #0f1318;
+  --card: #161b22;
+  --surface: #1b212a;
+  --control: #1f2630;
+  --glass-bg: linear-gradient(180deg, rgba(44,51,62,.62), rgba(22,27,34,.52));
+  --glass-menu: rgba(27,33,42,.94);
+  --glass-edge: rgba(255,255,255,.14);
+  --glass-filter: blur(18px) saturate(170%) brightness(.9);
+  --glass-shadow: inset 0 1px 1px rgba(255,255,255,.18), inset 0 -1px 1px rgba(255,255,255,.05),
+                  0 8px 28px rgba(0,0,0,.38);
+  --glass-sheen: linear-gradient(135deg, rgba(255,255,255,.14), rgba(255,255,255,0) 38%, rgba(255,255,255,0) 72%, rgba(255,255,255,.06));
+  --glass-pill: rgba(106,166,255,.18);
+  --glass-pill-edge: inset 0 1px 1px rgba(255,255,255,.12), 0 1px 3px rgba(0,0,0,.25);
+  --accent: #6aa6ff;
+  --accent-soft: #16263f;
+  --hero: #15407a;
+  --rule: #6aa6ff;
+  --warn: #e0a93a;
+  --warn-soft: #241d10;
+  --warn-line: #4a3c1c;
+  --warn-ink: #e8cf9a;
+  --band: #1c1811;
+  --shadow: 0 1px 2px rgba(0,0,0,.5), 0 10px 28px rgba(0,0,0,.38);
+}
+[data-theme="dark"] .panel.is-target .frame { border-color: #2f6b45; box-shadow: 0 0 0 1px #2f6b45; }
+[data-theme="dark"] tbody tr.is-best td { background: #1a2b44; }
+[data-theme="dark"] .nav a:hover { background: rgba(106,166,255,.12); }
+/* the maps carry their own light background, so keep their surround neutral */
+[data-theme="dark"] .frame { border-color: #333c49; }
+
+/* ---------- logo, theme toggle, rights ---------- */
+.nav-logo { width: 22px; height: 22px; object-fit: contain; flex: none; }
+[data-theme="dark"] .nav-logo { content: url("assets/dilab-d-white.png"); }
+
+#themeToggle {
+  margin-left: auto; flex: none; cursor: pointer;
+  width: 32px; height: 32px; padding: 0; border-radius: 50%;
+  border: 1px solid var(--line); background: var(--control); color: var(--ink-2);
+  display: inline-flex; align-items: center; justify-content: center;
+}
+#themeToggle:hover { color: var(--ink); border-color: var(--ink-3); }
+#themeToggle svg { width: 16px; height: 16px; }
+#themeToggle .icon-moon { display: none; }
+[data-theme="dark"] #themeToggle .icon-sun { display: none; }
+[data-theme="dark"] #themeToggle .icon-moon { display: inline; }
+
+.hero-logo {
+  display: block; width: 52px; height: 52px; object-fit: contain;
+  margin: 0 auto 24px;   /* block, so it centres and the gap actually applies */
+}
+
+.rights {
+  max-width: none; text-align: center; margin: 22px auto 0;
+  font-size: 12.5px; color: var(--ink-3); hyphens: none;
+}
+
+/* ---------- comparison chart ---------- */
+.chart-fig { padding: 20px 18px 14px; }
+.chart-svg { width: 100%; height: auto; display: block; overflow: visible; }
+.chart-tick { font-size: 11px; fill: var(--ink-3); }
+.chart-axis { font-size: 12px; fill: var(--ink-2); font-weight: 600; }
+.chart-bar { cursor: pointer; transition: opacity .12s ease; }
+.chart-bar:hover { opacity: .78; }
+
+.chart-legend { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 12px; justify-content: center; }
+.chart-legend button {
+  font: inherit; font-size: 12.5px; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 7px;
+  border: 1px solid var(--line); background: var(--control); color: var(--ink-2);
+  border-radius: 999px; padding: 5px 12px;
+}
+.chart-legend button:hover { color: var(--ink); }
+.chart-legend button.is-off { opacity: .42; text-decoration: line-through; }
+.chart-legend i { width: 10px; height: 10px; border-radius: 2px; flex: none; }
+
+.chart-tip {
+  position: absolute; pointer-events: none; z-index: 5;
+  transform: translate(12px, -50%);
+  background: var(--card); color: var(--ink);
+  border: 1px solid var(--line); border-radius: 8px;
+  box-shadow: var(--shadow); padding: 8px 11px;
+  font-size: 12.5px; line-height: 1.45; white-space: nowrap;
+  opacity: 0; transition: opacity .1s ease;
+}
+.chart-tip.on { opacity: 1; }
+
+.rights.disclaimer {
+  margin-top: 8px; font-size: 12px; color: var(--ink-3);
+  max-width: 96ch; opacity: .85;
+}
+
+.chart-target { font-size: 11px; fill: var(--ink-2); font-weight: 600; }
+
+.chart-controls {
+  display: flex; flex-wrap: wrap; gap: 10px 16px;
+  justify-content: center; margin-bottom: 14px;
+}
+.chart-picker { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--ink-3); }
+.chart-picker select {
+  font: inherit; font-size: 12.5px; color: var(--ink);
+  border: 1px solid var(--line); border-radius: 6px;
+  background: var(--control); padding: 5px 8px;
+}
+.chart-dot { cursor: pointer; }
+.chart-dot:hover { r: 5; }
+
+ol.points { padding-left: 22px; }
+ol.points li { margin-bottom: 12px; }
+ol.points li::marker { color: var(--ink-3); font-weight: 600; }
+
+/* Ghana and the Philippines share the warm "not validated" treatment. */
+
+.panel-interval { margin-top: 5px; font-size: 11px; color: var(--muted, #666); font-variant-numeric: tabular-nums; }
+
+/* Keep comparisons readable on phones without widening the page. */
+@media (max-width: 700px) {
+  .nav { top: 0; padding: 0 10px; }
+  .nav-in { flex-wrap: nowrap; overflow-x: auto; padding: 8px; gap: 4px; border-radius: 14px; }
+  .nav-in > * { flex-shrink: 0; }
+  .hero { padding: 12px 10px 8px; }
+  .hero > .wrap { padding: 30px 18px; }
+  .hero h1 { font-size: clamp(26px, 7vw, 36px); }
+  section { padding-inline: 10px; }
+  section > .wrap, section > .wrap-wide { padding: 24px 16px; border-radius: 16px; }
+  .panels { grid-auto-columns: min(82vw, 320px); scroll-snap-type: x proximity; }
+  .panel { scroll-snap-align: start; }
+  .controls { flex-wrap: wrap; gap: 10px; }
+  .scrub { order: 2; flex-basis: 100%; min-width: 0; }
+  .clock { margin-left: auto; }
+  .loading { height: auto; min-height: 20px; }
+  .tw table { min-width: 600px; }
+  .btn, .speed { min-height: 44px; }
+  .panel-interval { color: var(--ink-3); }
+}
+@media (max-width: 700px) {
+  .tabs { max-width: 100%; min-width: 0; overflow-x: auto; flex-shrink: 1; }
+  .tabs button { flex-shrink: 0; }
+  .panels { grid-auto-columns: min(100%, 320px); }
+}
+
+/* Desktop labels, with compact icon navigation on phones. */
+.nav { margin-bottom: 16px; }
+.nav-in { gap: 6px; padding: 8px 18px; }
+.nav a { width: auto; min-height: 36px; padding: 6px 9px; justify-content: center; }
+.nav a svg { width: 16px; height: 16px; }
+.nav a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.nav-brand { display: flex; align-items: center; gap: 7px; flex: 0 0 auto; max-width: 0; overflow: hidden; opacity: 0; transform: translateX(-6px); transition: max-width 260ms ease, opacity 220ms ease, transform 260ms ease; }
+.nav.past-header .nav-brand { max-width: 160px; opacity: 1; transform: translateX(0); }
+.nav-logo, .nav-code { display: block; }
+.nav.past-header .nav-logo { display: block; width: 22px; height: 22px; }
+.nav.past-header .nav-code { display: block; font-size: 14px; padding-right: 8px; }
+.hero .hero-logo { display: block; width: 44px; height: 44px; margin: 0 auto 14px; }
+.hero > .wrap { padding: 34px 30px; }
+.hero .byline { font-size: 12px; margin-top: 12px; }
+@media (max-width: 700px) {
+  .nav { margin-bottom: 10px; }
+  .nav-in { padding: 6px 8px; gap: 2px; }
+  .nav-label { display: none; }
+  .nav a { width: 30px; min-height: 36px; padding: 7px; }
+  .nav.past-header .nav-code { font-size: 13px; padding-right: 6px; }
+  .hero { padding-top: 10px; }
+  .hero > .wrap { padding: 22px 16px; }
+  .hero .hero-logo { width: 36px; height: 36px; margin-bottom: 10px; }
+  .hero .kicker { font-size: 10px; padding: 3px 9px; }
+  .hero h1 { font-size: 30px; margin: 8px 0 6px; }
+  .hero .byline { font-size: 11px; margin-top: 8px; }
+  .hero .affil { font-size: 12px; }
+  .hero .stamp { font-size: 11px; margin-top: 8px; }
+}
+
+@media (max-width: 700px) {
+  .nav { top: 8px; padding-top: 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nav-brand { transition: none; }
+}
+
+.nav a.nav-brand { padding: 0; min-height: 30px; justify-content: flex-start; border-radius: 0; background: transparent; }
+.nav-tests { position: relative; }
+.nav-tests summary { display: flex; align-items: center; gap: 6px; padding: 6px 9px; min-height: 36px; font-size: 13.5px; color: var(--ink-2); cursor: pointer; list-style: none; }
+.nav-tests summary::-webkit-details-marker { display: none; }
+.nav-tests summary svg { width: 16px; height: 16px; }
+.tests-menu { position: absolute; top: calc(100% + 8px); right: 0; min-width: 155px; padding: 6px; background: var(--glass-menu); border: 1px solid var(--glass-edge); border-radius: 14px; box-shadow: var(--glass-shadow); }
+.nav .tests-menu a { display: flex; justify-content: flex-start; width: 100%; }
+#themeToggle { border: 0; background: transparent; flex: 0 0 32px; }
+@media (max-width: 700px) {
+  .nav { top: 4px; padding-top: 4px; }
+  .nav-in { padding: 3px 6px; gap: 0; overflow: visible; }
+  .nav a, .nav-tests summary { width: 26px; min-height: 30px; padding: 5px; }
+  .nav a.nav-brand { width: auto; gap: 4px; }
+  .nav.past-header .nav-logo { width: 16px; height: 16px; }
+  .nav.past-header .nav-code { font-size: 12px; padding-right: 4px; }
+  #themeToggle { width: 28px; height: 28px; flex-basis: 28px; margin-left: auto; }
+}
+
+/* Keep the brand highlight around the code, not the logo. */
+.nav a.nav-brand:hover, .nav a.nav-brand.is-active { background: transparent; box-shadow: none; }
+.nav-brand .nav-code { border-radius: 999px; padding: 3px 8px; }
+.nav-brand:hover .nav-code, .nav-brand.is-active .nav-code { background: var(--accent-soft); color: var(--accent); }
+.layer-toggles { gap: 8px; align-items: center; }
+.layer-toggles button { font: inherit; font-size: 12px; border: 1px solid var(--line); border-radius: 999px; padding: 5px 10px; background: var(--accent-soft); color: var(--accent); cursor: pointer; }
+.layer-toggles button.is-off { background: transparent; color: var(--ink-3); }
+.layer-toggles button:disabled { cursor: default; }
+/* Every tile has the same square map, regardless of label length. */
+.panels { grid-template-rows: auto auto; align-items: start; }
+.panel .frame { width: 100%; min-width: 0; height: auto; aspect-ratio: 1; align-self: start; }
+@media (max-width: 700px) {
+  .panels { grid-auto-flow: row; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-columns: auto; grid-template-rows: none; overflow: visible; gap: 16px 10px; }
+  .panel { grid-row: auto; grid-template-rows: auto auto; align-content: start; }
+  .panel-head { min-height: 56px; gap: 3px 6px; }
+  .panel-title { font-size: 11px; overflow-wrap: anywhere; }
+  .panel-title .nb { white-space: normal; }
+  .panel-role { font-size: 9px; }
+  .panel-interval { font-size: 9px; }
+}
+
+/* Tile selection and controls. */
+.tabs { flex-wrap: wrap; overflow: visible; }
+.layer-toggles { margin: 12px 0 16px; padding: 0; border-top: 0; }
+.panel-head { align-content: flex-end; align-items: flex-end; }
+.panels { grid-auto-columns: minmax(0, 320px); justify-content: start; }
+.btn-play { min-width: 40px; }
+@media (max-width: 700px) {
+  .tabs { overflow: visible; }
+  .panels { grid-auto-columns: auto; grid-template-columns: repeat(2, minmax(0, 200px)); }
+  .panel-head { align-content: flex-end; }
+  .controls .clock { order: 0; flex-basis: 100%; margin: 0; text-align: left; }
+  .controls .scrub { order: 1; flex-basis: 100%; }
+  .controls .btn, .controls .speed { order: 2; }
+  .chart-svg { min-height: 260px; }
+}
+
+.nav-tests summary { border-radius: 999px; }
+.nav-tests summary:hover { color: var(--ink); background: var(--accent-soft); }
+.nav-tests summary.is-active, .nav-tests[open] summary { color: var(--accent); background: var(--glass-pill); box-shadow: var(--glass-pill-edge); font-weight: 600; }
+.nav-tests summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Sources uses the same phone gutters and card padding as report sections. */
+@media (max-width: 700px) {
+  footer { padding-inline: 10px; }
+  footer > .wrap { padding: 24px 16px; border-radius: 16px; }
+}
+
+.timing-note { font-size: 12px; color: var(--ink-3); margin: 8px 0 0; }
+
+@media (max-width: 700px) {
+  section > .wrap > h2, section > .wrap-wide > h2 { font-size: 21px; }
+  h3 { font-size: 18px; }
+}
+
+/* Quiet full-width dividers beneath main section headings. */
+section > .wrap > h2, section > .wrap-wide > h2 {
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+/* Bracketed references and stable navigation with pop-out help. */
+.references { list-style: none; counter-reset: reference; padding-left: 2em; }
+.references li { counter-increment: reference; position: relative; }
+.references li::before { content: "[" counter(reference) "]"; position: absolute; left: -2em; }
+.nav-help { position: fixed; z-index: 100; pointer-events: none; padding: 5px 9px; border-radius: 6px; background: var(--ink); color: var(--page); font-size: 12px; max-width: calc(100vw - 16px); box-shadow: 0 2px 8px #0002; }
+
+/* The nav reaches a little past the cards on each side, and stays on one line. */
+.nav { padding-inline: 18px; }
+.nav-in { max-width: calc(var(--maxw-wide) + 24px); flex-wrap: nowrap; }
+@media (min-width: 701px) and (max-width: 960px) {
+  .nav-in { gap: 0; padding-inline: 12px; }
+  .nav a, .nav-tests summary { padding-inline: 7px; font-size: 13px; }
+}
+@media (min-width: 701px) and (max-width: 780px) {
+  .nav a, .nav-tests summary { padding-inline: 4px; font-size: 12.5px; }
+}
+@media (max-width: 700px) {
+  .nav { padding-inline: 4px; }
+  #toTop { right: 14px; bottom: 14px; width: 40px; height: 40px; }
+}
