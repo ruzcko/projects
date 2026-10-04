@@ -57,8 +57,8 @@
 <section id="overview">
   <div class="wrap">
     <h2>Project Overview</h2>
-    <p>This project evaluates whether precipitation downscaling can provide finer spatial and temporal rainfall information for the Indonesian application. Two approaches, SpateGAN and CEDDAR, have been adapted to IFS forecasts and evaluated against Korean radar reference data.</p>
-    <p>Korean validation is complete for the reported configurations. Results show improvements in some error measures, alongside limitations in rainfall detection and spatial agreement. Regional inference examples demonstrate that the processing workflow runs over Indonesia, the Philippines, and Ghana; predictive accuracy in those regions has not yet been established.</p>
+    <p>This project tests whether precipitation downscaling can give finer spatial and temporal rainfall detail for the Indonesian application. We adapted two models, SpateGAN and CEDDAR, to IFS forecasts and evaluated them against Korean radar data.</p>
+    <p>Korean validation is complete for the reported configurations. Both models improve some error measures over IFS, but both have lower rainfall detection and spatial agreement scores. Example runs show that the workflow also runs over Indonesia, the Philippines, and Ghana. Accuracy in those regions has not been measured.</p>
 
   </div>
 </section>
@@ -70,15 +70,21 @@
 
     <h3>SpateGAN</h3>
     <p>SpateGAN is a generative adversarial network that increases the spatial and temporal resolution of rainfall
-      fields. Its generator produces detailed rainfall sequences, while a discriminator helps it learn realistic
-      rainfall patterns. The original ERA5 model was trained using German radar observations to downscale hourly,
-      24 km precipitation to 10-minute, 2 km fields. It can generate multiple rainfall realizations to represent
-      uncertainty <a href="#ref1">[1]</a>.</p>
-    <p>For this project, the pretrained model is adapted to IFS total precipitation and further trained using Korean PEAK<sub>HSP</sub>
-      targets. <b>SpateGAN-IFS</b> is the pretrained generator adapted to one IFS total-precipitation
-      channel, without Korean fine-tuning. <b>SpateGAN-PEAK*</b> is the retained PEAK step-500 checkpoint.
-      Here, <i>selected checkpoint</i> denotes the recorded project selection, not the highest score in every metric or
-      superiority to CEDDAR. SpateGAN-KMA denotes the step-1,000 comparator; SpateGAN-PEAK-5k denotes the step-5,000 confirmation run. CEDDAR-PEAK denotes the selected epoch-19 B0 checkpoint. These short names are used in plots and tables.</p>
+      fields. A generator produces detailed rainfall sequences, and a discriminator helps it learn realistic
+      rainfall patterns. The original model takes hourly, 24 km ERA5 precipitation and produces 10-minute, 2 km
+      fields. It was trained on German radar observations. It can generate several rainfall realizations to
+      represent uncertainty <a href="#ref1">[1]</a>.</p>
+    <p>For this project, we adapted the pretrained model to IFS total precipitation and trained it further on Korean
+      PEAK<sub>HSP</sub> targets. Plots and tables use these short names:</p>
+    <ul>
+      <li><b>SpateGAN-IFS:</b> the pretrained generator adapted to one IFS total-precipitation channel, without Korean fine-tuning.</li>
+      <li><b>SpateGAN-PEAK*:</b> the PEAK checkpoint at step 500. This is the selected checkpoint.</li>
+      <li><b>SpateGAN-KMA:</b> the comparison checkpoint at step 1,000.</li>
+      <li><b>SpateGAN-PEAK-5k:</b> the PEAK training continued to step 5,000, to check whether longer training helps.</li>
+      <li><b>CEDDAR-PEAK:</b> the selected CEDDAR checkpoint, B0 configuration at epoch 19.</li>
+    </ul>
+    <p>A <i>selected checkpoint</i> is the one the project chose under its recorded criteria. It is not
+      necessarily the best on every metric, and it is not a claim that SpateGAN is better than CEDDAR.</p>
 
     <div class="tw" data-caption="SpateGAN: the original ERA5 model against our adaptation."><table>
       <thead><tr><th>Detail</th><th>Original model</th><th>Our adaptation</th></tr></thead>
@@ -96,10 +102,10 @@
       </tbody>
     </table></div>
 
-    <p>The adapted input covers 48 hours, and the output covers the central 24 hours. The comparison includes our
-      trained <b>SpateGAN-KMA</b>, the retained <b>SpateGAN-PEAK</b>, and
-      <b>SpateGAN-PEAK-5k</b>. KMA is the retained trained comparator; the current records do not establish
-      it as the best of all KMA checkpoints. The PEAK 5k checkpoint was not selected to replace step 500.</p>
+    <p>The adapted input covers 48 hours, and the output covers the central 24 hours. The comparison includes
+      <b>SpateGAN-KMA</b>, <b>SpateGAN-PEAK</b>, and <b>SpateGAN-PEAK-5k</b>. SpateGAN-KMA is the KMA
+      checkpoint kept for comparison. The current records do not show that it is the best KMA checkpoint.
+      SpateGAN-PEAK-5k did not replace step 500 as the selected checkpoint.</p>
 
     <figure>
       <img src="img/spategan-overview.webp" alt="SpateGAN overview">
@@ -111,13 +117,13 @@
     </figure>
 
     <h3>CEDDAR</h3>
-    <p>CEDDAR is a diffusion-based model that generates high-resolution rainfall through repeated denoising, guided by
-      coarse-resolution precipitation. Different samples produce an ensemble of possible rainfall fields. The original
-      model downscales daily ERA5 precipitation at approximately 30 km to 2.5 km over Denmark, using the DANRA regional
-      reanalysis as its reference <a href="#ref2">[2]</a>.</p>
-    <p>For this project, CEDDAR has been adapted to paired IFS and PEAK<sub>HSP</sub> data. The B0 configuration was trained from scratch.
-      The full 1,518-forecast rainfall evaluation is complete; results below are separate from training and validation
-      loss.</p>
+    <p>CEDDAR is a diffusion model. It generates high-resolution rainfall by repeated denoising, guided by
+      coarse-resolution precipitation. Each sample is one possible rainfall field, so several samples form an
+      ensemble. The original model downscales daily ERA5 precipitation from about 30 km to 2.5 km over Denmark.
+      Its reference data is the DANRA regional reanalysis <a href="#ref2">[2]</a>.</p>
+    <p>For this project, we adapted CEDDAR to paired IFS and PEAK<sub>HSP</sub> data and trained the B0 configuration from
+      scratch. The rainfall evaluation over all 1,518 forecasts is complete. The results below come from that
+      evaluation, not from training or validation loss.</p>
 
     <div class="tw" data-caption="CEDDAR: the released B0 configuration against our adaptation."><table>
       <thead><tr><th>Detail</th><th>Original model</th><th>Our adaptation</th></tr></thead>
@@ -135,9 +141,9 @@
       </tbody>
     </table></div>
 
-    <p>CEDDAR generates individual three-hour rainfall fields rather than learning a continuous rainfall sequence.
-      Consecutive outputs can be displayed together to show an event over time. The reporting checkpoint is corrected
-      PEAK B0, epoch 19, using three ensemble members and 56 denoising steps.</p>
+    <p>CEDDAR generates separate three-hour rainfall fields. It does not learn a continuous rainfall sequence.
+      Consecutive outputs can be shown together to follow an event over time. The reported results use the
+      corrected PEAK B0 checkpoint at epoch 19 (CEDDAR-PEAK), with three ensemble members and 56 denoising steps.</p>
 
     <figure>
       <img src="img/ceddar-architecture.webp" alt="CEDDAR architecture">
@@ -157,34 +163,36 @@
       <figcaption>Study regions and IFS, SpateGAN and CEDDAR coverage in South Korea and Indonesia.</figcaption>
     </figure>
 
-    <p>IFS provides the forecast rainfall inputs, while PEAK<sub>HSP</sub> rainfall data prepared from KMA radar provide the
-      high-resolution targets over Korea. The PEAK paper is currently under review. DI Cast 2 km is included as a
-      supplementary satellite-product comparison. Performance in Indonesia remains to be assessed.</p>
+    <p>IFS provides the forecast rainfall inputs. PEAK<sub>HSP</sub> rainfall, prepared from KMA radar data,
+      provides the high-resolution targets over Korea. The PEAK paper is under review. DI Cast 2 km, a satellite
+      rainfall product, is included as an extra comparison. Performance in Indonesia has not yet been assessed.</p>
     <ul>
-      <li><b>IFS:</b> ECMWF Integrated Forecasting System forecasts <a href="#ref3">[3]</a>, with total precipitation prepared as three-hour amounts on a 24 km grid. The selected input
-        sequences retain the forecast cycle and lead times.</li>
-      <li><b>PEAK<sub>HSP</sub>:</b> Korean radar rainfall prepared at 2 km spatial resolution, integrated into half-hour
-        amounts and summed into three-hour amounts for CEDDAR.</li>
-      <li><b>DI Cast 2 km:</b> satellite-derived rainfall aligned to the regional analysis grids for comparison. Its
-        product interpretation remains provisional; missing observations stay visible, and DI Cast over Indonesia is not treated
-        as ground truth.</li>
+      <li><b>IFS:</b> ECMWF Integrated Forecasting System forecasts <a href="#ref3">[3]</a>. Total precipitation is prepared as
+        three-hour amounts on a 24 km grid. The selected input sequences keep their forecast cycle and lead times.</li>
+      <li><b>PEAK<sub>HSP</sub>:</b> Korean radar rainfall at 2 km spatial resolution, integrated into half-hour amounts. For CEDDAR, these are
+        summed into three-hour amounts.</li>
+      <li><b>DI Cast 2 km:</b> satellite-derived rainfall, aligned to the regional analysis grids for comparison. How to interpret the
+        product is still provisional. Missing observations stay visible, and DI Cast over Indonesia is not treated as ground
+        truth.</li>
     </ul>
 
     <h3>Model-specific Preparation</h3>
-    <p>IFS and PEAK<sub>HSP</sub> data are paired by location and rainfall interval, then prepared in the model-specific formats
-      described above. Rainfall amounts are stored in millimetres. Timestamps use UTC and mark the end of each rainfall
-      interval. The current PEAK datasets retain complete targets without imputing missing values. Normalization
-      statistics use training data only, and split leakage checks passed.</p>
+    <p>IFS and PEAK<sub>HSP</sub> data are paired by location and rainfall interval, then prepared in the model-specific
+      formats described above. Rainfall amounts are stored in millimetres. Timestamps use UTC and mark the end of
+      each rainfall interval. The current PEAK datasets keep complete targets and do not impute missing values.
+      Normalization statistics use training data only. Checks for leakage between the training and validation
+      splits passed.</p>
 
     <div data-table="samples" data-caption="Training and validation sample counts for each model."></div>
     <p class="tnote">The models use different sample formats, so the sample counts are not directly comparable. An
       independent test set is still needed to assess performance after model development.</p>
 
     <h4>Validation blocks</h4>
-    <p>Both datasets draw from February 1, 2024 through December 31, 2025. Starts are inclusive and ends exclusive, all
-      at 00:00 UTC. Training uses other eligible records after removing overlapping windows and cycles. SpateGAN
-      additionally excludes shared IFS and target times; CEDDAR excludes other samples from cycles contributing
-      validation targets.</p>
+    <p>Both datasets use records from February 1, 2024 to December 31, 2025. Each block starts and ends at
+      00:00 UTC; the start is included and the end is not. Training uses the remaining eligible records, after
+      removing windows and cycles that overlap a validation block. SpateGAN also excludes samples that share IFS
+      or target times with validation. CEDDAR also excludes other samples from cycles that provide validation
+      targets.</p>
     <div data-table="blocks" data-caption="Configured validation blocks, one per season."></div>
   </div>
 </section>
@@ -193,24 +201,24 @@
 <section id="korea">
   <div class="wrap-wide">
     <h2>Korean Validation Results</h2>
-    <p>The selected SpateGAN checkpoint reduces MAE and CRPS relative to its matched IFS baseline, but underestimates rainfall and has lower detection and spatial scores. CEDDAR improves CRPS while producing higher MAE and lower detection and spatial scores. These results support further evaluation, but do not establish a general accuracy improvement over IFS.</p>
-    <p class="lede">Forecasts and generated rainfall are compared against PEAK<sub>HSP</sub> radar observations. Every score on this
-      page comes from this section. All six prepared cases are available from the tabs below.</p>
+    <p>The selected SpateGAN checkpoint has lower MAE and CRPS than its matched IFS reference. However, it underestimates rainfall and has lower detection and spatial scores. CEDDAR has lower CRPS than IFS, but higher MAE and lower detection and spatial scores. These results support further evaluation. They do not show a general accuracy improvement over IFS.</p>
+    <p class="lede">All scores on this page come from this section. Each compares forecasts or generated rainfall with
+      PEAK<sub>HSP</sub> radar observations. The tabs below show all six prepared cases.</p>
 
     <h3>SpateGAN cases</h3>
-    <p class="small muted">All panels share one clock. IFS holds each three-hour field for six half-hour ticks so it
-      stays aligned with the half-hour panels rather than drifting. Area is 336 km x 336 km.</p>
+    <p class="small muted">All panels share one clock. IFS shows each three-hour field for six half-hour steps, so it
+      stays aligned with the half-hour panels. The area is 336 km x 336 km.</p>
     <div class="viewer" data-viewer="kr:spategan"></div>
 
     <h4>Quantitative summary, three-hour amounts</h4>
     <div data-summary="spategan" data-caption="SpateGAN checkpoints against PEAK_HSP observations, three-hour amounts."></div>
-    <p class="tnote"><b>Selected checkpoint*</b> is the retained PEAK step 500, selected under the recorded project criteria.
-      Its lower MAE does not mean it wins every metric: the matched IFS reference has higher CSI-M and Ensemble FSS.
-      Nine of the 489 sequences share input times with historical KMA training, although none share forecast or target
-      times; the strict no-input-overlap subset contains 480 sequences.</p>
-    <p class="tnote"><b>Longer training:</b> step 5,000 has slightly lower MAE, but worse CRPS, rainfall detection and
-      spatial agreement than step 500. Its total rainfall is about 58.8% below the target. Longer training did not
-      produce an overall improvement; lower MAE alone would conceal the stronger underestimation.</p>
+    <p class="tnote"><b>Selected checkpoint*</b> is PEAK step 500, chosen under the recorded project criteria. Its lower MAE does not mean
+      it is better on every metric: the matched IFS reference has higher CSI-M and Ensemble FSS. Nine of the 489
+      sequences share input times with historical KMA training data, but none share forecast or target times.
+      Without those nine, the strict subset with no input overlap has 480 sequences.</p>
+    <p class="tnote"><b>Longer training:</b> step 5,000 has slightly lower MAE than step 500, but worse CRPS, rainfall detection and
+      spatial agreement. Its total rainfall is about 58.8% below the target. Longer training did not improve the
+      model overall. Looking at MAE alone would hide the stronger underestimation.</p>
 
     <figure class="chart-fig">
       <div data-chart="spategan"></div>
@@ -229,13 +237,13 @@
 
     <figure class="chart-fig">
       <div data-lead-chart="spategan"></div>
-      <figcaption>SpateGAN scores against forecast lead time. Lead is counted from when the forecast was issued;
-        SpateGAN output covers the central 24 hours of its 48-hour window, so its leads begin at 18 hours.</figcaption>
+      <figcaption>SpateGAN scores against forecast lead time. Lead time is counted from forecast issue.
+        SpateGAN output covers the central 24 hours of its 48-hour window, so its lead times begin at 18 hours.</figcaption>
     </figure>
 
     <h3>CEDDAR cases</h3>
-    <p class="small muted">CEDDAR provides eight three-hour fields per case, each held for six half-hour display frames
-      so playback matches SpateGAN without implying finer temporal resolution. Area is 256 km x 256 km.</p>
+    <p class="small muted">CEDDAR gives eight three-hour fields per case. Each field is shown for six half-hour frames,
+      so playback matches SpateGAN without suggesting finer temporal resolution. The area is 256 km x 256 km.</p>
     <div class="viewer" data-viewer="kr:ceddar"></div>
 
     <h4>Quantitative summary, three-hour amounts</h4>
@@ -260,9 +268,10 @@
     </figure>
 
     <h3>Results by rainfall threshold</h3>
-    <p>Thresholds are 0.1, 1, 3, 5 and 8 mm/hour, converted to three-hour amounts. Counts and sums are pooled over the
-      evaluated samples before calculating scores; POD-M, FAR-M and CSI-M average the five defined threshold scores
-      equally. Undefined scores stay blank and are excluded, not replaced with zero.</p>
+    <p>The thresholds are 0.1, 1, 3, 5 and 8 mm/hour, converted to three-hour amounts. Counts and sums are pooled
+      over all evaluated samples before scores are calculated. POD-M, FAR-M and CSI-M are the equal-weight mean of
+      the defined scores at the five thresholds. Undefined scores stay blank and are left out; they are not set
+      to zero.</p>
     <div data-table="thresholds" data-caption="Rainfall thresholds used for the detection scores."></div>
 
     <figure class="chart-fig">
@@ -278,45 +287,45 @@
 
     <div class="slot">
       <h4>Ensemble FSS, threshold against spatial scale</h4>
-      <p>Ensemble FSS is the unweighted mean of 35 defined combinations, five thresholds by seven neighbourhood sizes
-        of 1, 4, 8, 16, 32, 64 and 128 km, where the nominal 1 km label represents one 2 km grid cell. Only the mean is
-        currently recorded. The threshold-by-scale breakdown remains to be completed.</p>
+      <p>Ensemble FSS is the unweighted mean over 35 combinations: five thresholds by seven neighbourhood sizes
+        (1, 4, 8, 16, 32, 64 and 128 km). The 1 km label stands for one 2 km grid cell. Only the mean is recorded
+        so far. The breakdown by threshold and scale is not yet complete.</p>
     </div>
 
     <h3>Understanding the metrics</h3>
-    <p>Arrows indicate whether higher or lower values are better. <b>M</b> denotes the unweighted mean across the
-      specified rainfall thresholds. MAE is already an average rainfall-amount error. Both tables use unadjusted
-      rainfall and the saved ensemble-fraction FSS calculation, not legacy meFSS or the alternative ensemble-mean FSS.</p>
+    <p>Arrows show whether higher or lower values are better. <b>M</b> marks the unweighted mean across the
+      rainfall thresholds. MAE is already an average error in rainfall amount. Both tables use unadjusted
+      rainfall. FSS uses the saved ensemble-fraction calculation, not the legacy meFSS or the ensemble-mean FSS.</p>
     <div class="tw" data-caption="What each metric measures."><table>
       <thead><tr><th>Metric</th><th>Meaning</th></tr></thead>
       <tbody>
         <tr><td>MAE</td><td>Average absolute error in rainfall amount.</td></tr>
         <tr><td>POD</td><td>Fraction of observed rainfall events detected.</td></tr>
         <tr><td>FAR</td><td>Fraction of predicted rainfall events that were false alarms.</td></tr>
-        <tr><td>CSI</td><td>Rainfall-detection accuracy accounting for hits, misses, and false alarms.</td></tr>
+        <tr><td>CSI</td><td>Detection accuracy that counts hits, misses, and false alarms.</td></tr>
         <tr><td>Ensemble FSS</td><td>Agreement of ensemble rainfall-exceedance fractions with observed fractions across evaluation neighbourhood sizes. Higher is better.</td></tr>
-        <tr><td>CRPS</td><td>Error of the ensemble forecast distribution against the observed amount; lower is better. For deterministic IFS this equals MAE.</td></tr>
+        <tr><td>CRPS</td><td>Error of the ensemble forecast distribution against the observed amount. Lower is better. For deterministic IFS, CRPS equals MAE.</td></tr>
       </tbody>
     </table></div>
-    <p class="tnote">MAE and detection use the ensemble mean; CRPS uses all three members. Three-member uncertainty
-      results do not establish calibration.</p>
+    <p class="tnote">MAE and detection scores use the ensemble mean. CRPS uses all three members. Results from three
+      members do not establish calibration.</p>
 
     <h3>Computational cost</h3>
     <h4>Training</h4>
     <div data-table="training" data-caption="Training cost for the reported runs."></div>
-    <p class="tnote">Both runs allocated four CPU cores and 44 GiB of host memory. Times cover the full training runs,
-      including validation and saved outputs; the selected checkpoints are step 500 and epoch 19. SpateGAN adapts the
-      input layers of a pretrained model, while CEDDAR trains from scratch, so these costs cover different training
-      scopes. Peak training GPU memory and training FLOPs were not measured.</p>
+    <p class="tnote">Each run was allocated four CPU cores and 44 GiB of host memory. Times cover the full training
+      runs, including validation and saving outputs. The selected checkpoints are step 500 and epoch 19. SpateGAN
+      adapts the input layers of a pretrained model, while CEDDAR trains from scratch, so the two costs cover
+      different amounts of training. Peak GPU memory and FLOPs during training were not measured.</p>
 
     <h4>Inference</h4>
     <div data-table="inference" data-caption="Inference cost measured on one V100."></div>
-    <p class="tnote">Measured on one NVIDIA V100-SXM2 (32 GB), with three ensemble members and three timed repetitions
-      across the 12 selected Korean and Indonesian cases after warm-up. Times are mean plus or minus standard deviation; input
-      preparation, transfers, file writing and visualization are excluded. One SpateGAN sample produces 48 half-hour
-      fields over 24 hours; one CEDDAR sample produces a three-hour field, so a 24-hour case requires eight
-      predictions. Output areas also differ, so these are current-configuration costs rather than a matched
-      architecture comparison.</p>
+    <p class="tnote">Measured on one NVIDIA V100-SXM2 (32 GB) after warm-up, with three ensemble members and three timed
+      repetitions across the 12 selected Korean and Indonesian cases. Times are mean plus or minus standard deviation. They
+      exclude input preparation, transfers, file writing and visualization. One SpateGAN sample produces 48
+      half-hour fields over 24 hours. One CEDDAR sample produces one three-hour field, so a 24-hour case needs
+      eight predictions. The output areas also differ. These are costs of the current configurations, not a
+      matched comparison of the architectures.</p>
   </div>
 </section>
 
@@ -326,22 +335,22 @@
     <h2>Regional Application: Indonesia</h2>
 
     <div class="callout">
-      <strong>No accuracy is established in this section.</strong> Indonesian radar observations are not available, so
-      there is no target to score against and no metric on this page describes Indonesian performance. These animations
-      show what each model produced over the application region, nothing more. DI Cast appears as an in-house product
-      for comparison and is not ground truth.
+      <strong>This section does not measure accuracy.</strong> Indonesian radar observations are not available, so
+      there is no target to score against. No metric on this page describes performance in Indonesia. The
+      animations show only what each model produced over the application region. DI Cast is shown as an in-house
+      product for comparison; it is not ground truth.
     </div>
 
     <h3>SpateGAN cases</h3>
-    <p class="small muted">The same 336 km x 336 km view and shared clock as the Korean cases, over the Indonesian
-      application region. There is no radar reference column here because no radar target exists, so the row is input, model
-      output and DI Cast only. Nothing in this row has been scored; it shows what the model produced.</p>
+    <p class="small muted">This row uses the same 336 km x 336 km view and shared clock as the Korean cases, over the
+      Indonesian application region. There is no radar target, so the row shows only the input, the model output
+      and DI Cast. Nothing in this row has been scored.</p>
     <div class="viewer" data-viewer="ind:spategan"></div>
 
     <h3>CEDDAR cases</h3>
-    <p class="small muted">Eight consecutive three-hour fields over the 256 km x 256 km CEDDAR area, each held for six
-      half-hour display frames so playback matches the SpateGAN row above. Grey cells are missing DI Cast
-      observations, not absent rainfall.</p>
+    <p class="small muted">Eight consecutive three-hour fields over the 256 km x 256 km CEDDAR area. Each field is shown for six
+      half-hour frames, so playback matches the SpateGAN row above. Grey cells are missing DI Cast observations,
+      not areas without rain.</p>
     <div class="viewer" data-viewer="ind:ceddar"></div>
   </div>
 </section>
@@ -352,15 +361,15 @@
     <h2>Regional Application: Philippines and Ghana</h2>
 
     <div class="callout">
-      <strong>Exploratory runs, not an evaluation.</strong> No scores have been computed for either region and no
-      model was trained or tuned on data from them. These are the Korean-trained checkpoints applied unchanged, to
-      test whether the pipeline transfers at all. The Philippine cases do have radar available for visual comparison;
-      the Ghanaian cases have no reference of any kind.
+      <strong>These are exploratory runs, not an evaluation.</strong> No scores have been computed for either
+      region, and no model was trained or tuned on their data. The Korean-trained checkpoints were applied
+      unchanged, to test whether the pipeline runs in other regions. The Philippine cases have radar data for
+      visual comparison. The Ghanaian cases have no reference data.
     </div>
 
-    <p>Both regions reuse an IFS input domain with the SpateGAN and CEDDAR output areas nested inside it, matching the
-      Korean and Indonesian configuration, so the existing preprocessing carries across without change. Only the
-      selected checkpoints are shown: SpateGAN-PEAK and CEDDAR-PEAK.</p>
+    <p>Both regions use the same layout as the Korean and Indonesian cases: an IFS input domain with the
+      SpateGAN and CEDDAR output areas inside it. The existing preprocessing therefore works without change. Only
+      the selected checkpoints are shown: SpateGAN-PEAK and CEDDAR-PEAK.</p>
 
     <figure>
       <img src="img/ph-gh.webp" alt="Study regions and model coverage in the Philippines and Ghana">
@@ -369,16 +378,15 @@
     </figure>
 
     <h3 id="philippines">Philippines</h3>
-    <p class="small muted">Three 24-hour cases, each named after the PAGASA radar site it is centred on. Radar is
-      shown as a target column for visual comparison only; nothing here has been scored against it. Grey in the radar
-      panel is outside that site&rsquo;s coverage, not an absence of rain, so any comparison is limited to the area the
-      radar actually sees.</p>
+    <p class="small muted">Three 24-hour cases, each named after the PAGASA radar site at its centre. The radar column is
+      for visual comparison only; nothing here has been scored against it. Grey in the radar panel is outside the
+      site&rsquo;s coverage, not an absence of rain. Any comparison is limited to the area the radar covers.</p>
     <div class="viewer" data-viewer="ph:spategan"></div>
     <div class="viewer" data-viewer="ph:ceddar"></div>
 
     <h3 id="ghana">Ghana</h3>
-    <p class="small muted">Two 24-hour cases with no reference data available, so the rows show input and model output
-      only. Nothing here can be checked against an observation.</p>
+    <p class="small muted">Two 24-hour cases with no reference data, so the rows show only the input and the model
+      output. Nothing here can be checked against observations.</p>
     <div class="viewer" data-viewer="gh:spategan"></div>
     <div class="viewer" data-viewer="gh:ceddar"></div>
   </div>
@@ -390,24 +398,24 @@
     <h2>Implications and Next Steps</h2>
 
     <h3>Findings</h3>
-    <p>SpateGAN&rsquo;s continuation to 5,000 training steps did not show sufficient improvement to replace the earlier
-      model version. Its total rainfall falls to 41% of the observed total, and its detection and spatial scores drop
-      sharply, while MAE alone would have suggested a small gain.</p>
-    <p>CEDDAR completed 400 training epochs, with its lowest validation loss at epoch 19. Its full rainfall evaluation
-      is complete: MAE and the detection and spatial scores are worse than its matched IFS reference, while CRPS is
-      lower. Total generated rainfall is approximately 5.1% above the target.</p>
-    <p>SpateGAN-PEAK has lower three-hour MAE and CRPS than its matched IFS reference, but lower CSI-M and Ensemble
-      FSS, and produces approximately 28.2% less rain than observed. Lower amount error therefore coexists with
-      underestimation and weaker occurrence and spatial scores.</p>
+    <p>SpateGAN-PEAK has lower three-hour MAE and CRPS than its matched IFS reference. However, it has lower CSI-M
+      and Ensemble FSS, and produces about 28.2% less rain than observed. Its lower amount error comes with
+      underestimation and weaker detection and spatial scores.</p>
+    <p>CEDDAR completed 400 training epochs, with its lowest validation loss at epoch 19. In the full rainfall
+      evaluation, its MAE and its detection and spatial scores are worse than its matched IFS reference, but its
+      CRPS is lower. Its total rainfall is about 5.1% above the target.</p>
+    <p>Continuing SpateGAN training to 5,000 steps did not improve it enough to replace step 500. Its total
+      rainfall falls to 41% of the observed total, and its detection and spatial scores drop sharply. MAE alone
+      would have suggested a small gain.</p>
 
     <h3>Application value and evidence required</h3>
-    <p>The current evidence demonstrates increased spatial and temporal resolution, but not consistently higher accuracy. Further evaluation should determine whether the additional detail improves a defined application, such as identifying local rainfall patterns or supporting downstream analysis.</p>
-    <p>Quantifying performance in Indonesia requires suitable reference observations. Radar and gauge coverage, data quality, access conditions, and acquisition costs should be assessed before selecting an evaluation dataset. The available Philippine radar cases offer an initial opportunity to assess transfer to a tropical region, subject to coverage and quality checks. They cannot establish Indonesian performance.</p>
+    <p>The current evidence shows higher spatial and temporal resolution, but not consistently higher accuracy. Further evaluation should test whether the extra detail helps a defined application, such as finding local rainfall patterns or supporting downstream analysis.</p>
+    <p>Measuring performance in Indonesia needs suitable reference observations. Before choosing an evaluation dataset, assess radar and gauge coverage, data quality, access conditions, and cost. The Philippine radar cases are a first chance to test transfer to a tropical region, after coverage and quality checks. They cannot show performance in Indonesia.</p>
 
     <h3>Compute, storage, and data requirements</h3>
-    <p>The reported training runs required <b>2.54 GPU-hours for SpateGAN and 10.49 GPU-hours for CEDDAR on one V100</b>. These measurements establish the requirements of the current configurations. They do not estimate the resources needed for broader model development, larger ensembles, or operational delivery.</p>
-    <p><b>Infrastructure priority.</b> Reliable GPU access and sufficient storage and data-transfer capacity would support repeated experiments, preprocessing, ensemble evaluation, and reproducible retention of inputs and results. Short individual training runs do not capture queue delays or the cumulative workload of comparing configurations. GPU concurrency, storage capacity, and throughput should be sized from the planned experiment schedule and measured data volumes; these requirements have not yet been quantified in this report.</p>
-    <p><b>Data priority.</b> The current training archive covers February 2024 to December 2025. Extending the Korean reference archive would add seasonal and event diversity and support a separate test period. Obtaining suitable observations in the application regions is equally important: additional compute alone cannot establish regional accuracy without reference data.</p>
+    <p>The reported training runs took <b>2.54 GPU-hours for SpateGAN and 10.49 GPU-hours for CEDDAR on one V100</b>. These numbers apply to the current configurations only. They do not estimate the resources for broader model development, larger ensembles, or operational delivery.</p>
+    <p><b>Infrastructure priority.</b> Reliable GPU access, enough storage, and enough data-transfer capacity would support repeated experiments, preprocessing, ensemble evaluation, and keeping inputs and results for reproducibility. Short single training runs do not show queue delays or the total work of comparing configurations. Size GPU concurrency, storage, and throughput from the planned experiment schedule and measured data volumes. This report does not yet quantify these requirements.</p>
+    <p><b>Data priority.</b> The current training archive covers February 2024 to December 2025. Extending the Korean reference archive would add seasonal and event diversity and support a separate test period. Getting suitable observations in the application regions is equally important. More compute cannot show regional accuracy without reference data.</p>
 
     <h3>Development priorities</h3>
     <ul>
@@ -420,15 +428,15 @@
     <p>The immediate priorities are to reserve an independent test period, complete the Ensemble FSS breakdown by
       threshold and spatial scale, and assess applicability to Indonesia.</p>
 
-    <p><b>Forecast input.</b> IFS availability is a constraint for the Indonesian application, so GFS is being
-      considered as a substitute or supplement, with other forecast sources explored alongside it. GFS is downloaded
-      at three-hour intervals, so the download cadence alone does not require changing the models&rsquo; temporal
-      structure. Before reuse, verify the precipitation accumulation windows and units, spatial grid and preprocessing,
-      and evaluate whether fine-tuning is needed for the change in forecast source. GFS-based performance remains
-      to be assessed separately from the IFS-based results on this page.</p>
+    <p><b>Forecast input.</b> IFS availability limits the Indonesian application. GFS is being considered as a substitute or
+      supplement, and other forecast sources are also being explored. GFS is downloaded at three-hour intervals,
+      so its download interval alone does not require changes to the models&rsquo; time structure. Before reuse,
+      check the precipitation accumulation windows, units, spatial grid and preprocessing. Then evaluate whether
+      the models need fine-tuning for the new forecast source. GFS-based performance must be assessed separately
+      from the IFS-based results on this page.</p>
 
-    <p><b>Cross-project reuse.</b> The same pipeline has now been run over the Philippines and Ghana; see that
-      section above for what it produced and what it does not establish.</p>
+    <p><b>Cross-project reuse.</b> The same pipeline has now run over the Philippines and Ghana. The section above shows what
+      it produced and what it does not establish.</p>
   </div>
 </section>
 

@@ -655,3 +655,13 @@ section > .wrap > h2, section > .wrap-wide > h2 {
 @media (max-width: 960px) {
   .nav.past-header .nav-code.nav-code-long { display: none; }
 }
+
+/* Compact tables. Rows use a tighter line height than the prose. On phones, text tables fit the
+   screen; only tables whose unbroken numbers are wider than the screen scroll sideways. */
+table { line-height: 1.45; }
+th, td { padding: 6px 12px; }
+@media (max-width: 700px) {
+  .tw table { min-width: 0; font-size: 12.5px; }
+  th, td { padding: 6px 8px; }
+  thead th { font-size: 11.5px; }
+}
