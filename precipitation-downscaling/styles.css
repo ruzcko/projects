@@ -665,3 +665,58 @@ th, td { padding: 6px 12px; }
   th, td { padding: 6px 8px; }
   thead th { font-size: 11.5px; }
 }
+
+/* ---------- before/after sliders ---------- */
+.compare-fig { padding: 16px; }
+.compare-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.compare-frame {
+  --pos: 50%; position: relative; aspect-ratio: 1; overflow: hidden;
+  border: 1px solid var(--line); border-radius: 10px; background: #f4f1e8;
+  cursor: ew-resize; user-select: none; -webkit-user-select: none;
+  touch-action: pan-y;                     /* vertical swipes still scroll the page */
+}
+.compare-side { position: absolute; inset: 0; background: center / 100% 100% no-repeat; }
+.compare-side img { width: 100%; height: 100%; display: block; border-radius: 0; pointer-events: none; }
+.compare-side.is-lo { clip-path: inset(0 calc(100% - var(--pos)) 0 0); }
+.compare-handle {
+  position: absolute; top: 0; bottom: 0; left: var(--pos); width: 3px; margin-left: -1.5px;
+  background: #fff; box-shadow: 0 0 0 1px rgba(16,24,40,.3), 0 0 6px rgba(16,24,40,.25); pointer-events: none;
+}
+/* a round knob with bold chevrons, so it reads as something to drag */
+.compare-handle::after {
+  content: "\2039\2009\203A"; position: absolute; top: 50%; left: 50%; width: 38px; height: 38px;
+  transform: translate(-50%, -50%); display: grid; place-items: center; padding-bottom: 2px; box-sizing: border-box;
+  border-radius: 50%; background: #fff; color: #1e6ded; font-size: 24px; font-weight: 700; line-height: 1;
+  box-shadow: 0 0 0 1px rgba(16,24,40,.15), 0 2px 8px rgba(16,24,40,.35);
+}
+.compare-tag {
+  position: absolute; top: 8px; padding: 2px 7px; border-radius: 6px; pointer-events: none;
+  background: rgba(255,255,255,.88); color: #16181d; font-size: 11.5px; font-weight: 600;
+  transition: opacity .15s ease;
+}
+.compare-tag.is-hidden { opacity: 0; }
+.compare-tag.is-left { left: 8px; }
+.compare-tag.is-right { right: 8px; }
+.compare-res { font-weight: 500; color: #6b7280; }
+.compare-range { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.compare-frame:has(.compare-range:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.compare-cap { margin-top: 7px; font-size: 12.5px; color: var(--ink-3); text-align: center; hyphens: none; }
+.compare-cbar { margin-top: 16px; }
+[data-theme="dark"] .compare-frame { border-color: #333c49; }
+@media (max-width: 700px) {
+  .compare-fig { padding: 10px; }
+  .compare-grid { gap: 10px; }
+  .compare-tag { top: 5px; padding: 1px 5px; font-size: 10px; }
+  .compare-tag.is-left { left: 5px; }
+  .compare-tag.is-right { right: 5px; }
+  .compare-res { display: none; }
+  .compare-handle::after { width: 30px; height: 30px; font-size: 19px; }
+  .compare-cap { font-size: 11px; }
+}
+/* Both sides are three-hour totals, so the viewer's half-hour scale note does not apply here. */
+.compare-cbar .cbar-note { display: none; }
+/* The slider figure uses the full card width, like the case viewers; wide screens show all four in one row. */
+section > .wrap > .compare-fig { max-width: none; }
+@media (min-width: 1000px) {
+  .compare-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}

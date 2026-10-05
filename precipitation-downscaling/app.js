@@ -359,6 +359,66 @@ function numberExhibits() {
   });
 }
 
+/* --------------------------------------------------------------- compare */
+
+// Before/after slider: IFS shows left of the divider, CEDDAR-PEAK right of it, for one three-hour window.
+// Drag with a mouse or finger; the hidden range input gives keyboard control and an accessible name.
+// All sliders on the page move together, so every region is compared at the same split.
+const compareGroup = [];
+function compareSlider(node) {
+  const [region, id, stamp] = node.dataset.compare.split(':');
+  const c = window.CASES.find(x => x.region === region && x.id === id);
+  const side = (key, cls) => {
+    const layer = c.layers[key];
+    const div = el('div', 'compare-side ' + cls);
+    if (layer.base) div.style.backgroundImage = `url("${layer.base}")`;
+    const img = el('img');
+    img.alt = `${layer.label}, ${node.dataset.name}`;
+    img.loading = 'lazy';
+    img.src = layer.frames[layer.stamps.indexOf(stamp)];
+    div.append(img);
+    return div;
+  };
+  const frame = el('div', 'compare-frame');
+  const range = el('input', 'compare-range');
+  Object.assign(range, { type: 'range', min: 0, max: 100, value: 50 });
+  range.setAttribute('aria-label', `Divider between IFS and CEDDAR, ${node.dataset.name}`);
+  const tagLo = el('span', 'compare-tag is-left', 'IFS <span class="compare-res">24 km</span>');
+  const tagHi = el('span', 'compare-tag is-right', 'CEDDAR <span class="compare-res">2 km</span>');
+  frame.append(side('ceddar-peak-0019', 'is-hi'), side('ifs-ceddar', 'is-lo'), el('div', 'compare-handle'),
+    tagLo, tagHi, range);
+
+  // A label shows only while its own side is visible under it.
+  const show = (v = +range.value) => {
+    frame.style.setProperty('--pos', v + '%');
+    range.value = v;
+    const x = v / 100 * frame.clientWidth;
+    tagLo.classList.toggle('is-hidden', x < tagLo.offsetLeft + tagLo.offsetWidth);
+    tagHi.classList.toggle('is-hidden', x > tagHi.offsetLeft);
+  };
+  compareGroup.push(show);
+  const set = v => {
+    v = Math.max(0, Math.min(100, v));
+    compareGroup.forEach(f => f(v));
+  };
+  const fromPointer = e => {
+    const r = frame.getBoundingClientRect();
+    set((e.clientX - r.left) / r.width * 100);
+  };
+  range.oninput = () => set(+range.value);
+  frame.addEventListener('pointerdown', e => {
+    frame.setPointerCapture(e.pointerId);
+    fromPointer(e);
+  });
+  frame.addEventListener('pointermove', e => { if (frame.hasPointerCapture(e.pointerId)) fromPointer(e); });
+  // focus after the browser's own mouse-down focus handling, so the arrow keys keep working after a drag
+  frame.addEventListener('pointerup', () => range.focus({ preventScroll: true }));
+  const end = new Date(stamp.replace(/(\d{4})(\d\d)(\d\d)T(\d\d)(\d\d)(\d\d)Z/, '$1-$2-$3T$4:$5:$6Z'));
+  node.append(frame, el('div', 'compare-cap', `<b>${node.dataset.name}</b><br><span class="nb">${clockLabel(end)}</span>`));
+  set(50);   // after the frame is in the page, so label positions can be measured
+  if (compareGroup.length === 1) addEventListener('resize', () => compareGroup.forEach(f => f()));
+}
+
 /* ---------------------------------------------------------------- chrome */
 
 function chrome() {
@@ -399,6 +459,9 @@ document.addEventListener('DOMContentLoaded', () => {
     layer.frames = layer.frames.map(url => optimized[url] || url);
     layer.base = bases[layer.frames[0]?.replace(/[^/]*$/, '')];
   }));
+
+  document.querySelectorAll('[data-compare]').forEach(compareSlider);
+  document.querySelectorAll('.compare-cbar').forEach(colourbar);
 
   document.querySelectorAll('[data-viewer]').forEach(node => {
     const [region, domain] = node.dataset.viewer.split(':');
