@@ -717,8 +717,8 @@ window.CASES = [
   "id": "case-03",
   "label": "Seosan record",
   "title": "Seosan record rainfall (114.9 mm/h)",
-  "label_ko": "Seosan 기록",
-  "title_ko": "Seosan 기록적 강수 (114.9 mm/h)",
+  "label_ko": "서산 기록",
+  "title_ko": "서산 기록적 강수 (114.9 mm/h)",
   "window": [
    "2025-07-16T00:00Z",
    "2025-07-17T00:00Z"
@@ -1429,8 +1429,8 @@ window.CASES = [
   "id": "case-05",
   "label": "Gunsan record",
   "title": "Gunsan record downpour (152 mm/h)",
-  "label_ko": "Gunsan 기록",
-  "title_ko": "Gunsan 기록적 폭우 (152 mm/h)",
+  "label_ko": "군산 기록",
+  "title_ko": "군산 기록적 폭우 (152 mm/h)",
   "window": [
    "2025-09-06T00:00Z",
    "2025-09-07T00:00Z"

@@ -41,7 +41,7 @@ const KO = {
   'Inference per<br>sample (s)': '샘플당<br>추론 시간 (s)', 'Peak GPU<br>memory (GiB)': '최대 GPU<br>메모리 (GiB)',
   'Inference per<br>case (s)': '사례당<br>추론 시간 (s)',
   'Threshold (mm/hour)': '임계값 (mm/h)', 'As a three-hour amount (mm)': '3시간 누적량 (mm)',
-  'Ensemble spread (mm/3 h)': '앙상블 퍼짐 (mm/3 h)', '10–90% interval coverage': '10–90% 구간 포함률',
+  'Ensemble spread (mm/3 h)': '앙상블 스프레드 (mm/3 h)', '10–90% interval coverage': '10–90% 구간 포함률',
   'Group': '그룹', 'Stage 1 (GFS)': '1단계 (GFS)', 'Stage 2 (IFS)': '2단계 (IFS)',
   'Split': '분할', 'Dates': '기간', 'SpateGAN samples': 'SpateGAN 샘플', 'CEDDAR samples': 'CEDDAR 샘플',
   'Run': '실행', 'FSS without GFS': 'FSS (GFS 없음)', 'FSS with GFS': 'FSS (GFS 있음)',
