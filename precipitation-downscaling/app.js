@@ -1,4 +1,4 @@
-/* G-26IND-A technical report page.
+/* Technical report page.
    One master clock per viewer, 48 half-hour ticks over 24 hours. Layers map the
    current tick to their own frame index, so a three-hour layer holds each frame
    for six ticks and stays aligned with the half-hour layers rather than drifting. */
@@ -17,6 +17,30 @@ const fmt4 = v => (v == null ? PENDING : v.toFixed(4));
 // Keep parenthetical label notes together when wrapping.
 const noBreakParens = s => s.replace(/\([^)]*\)\*?/g, m => '<span class="nb">' + m + '</span>');
 const datasetLabel = s => s.replace(/PEAK_HSP/g, 'PEAK<sub>HSP</sub>');
+// One display name per model or layer, used wherever a name is shown (panels, layer chips,
+// table rows, chart and station legends, compare tags). Data keys stay unchanged.
+const DISPLAY_NAMES = {
+  'SpateGAN-IFS (seed 43)': 'SpateGAN-IFS, second run',
+  'CEDDAR-IFS': 'CEDDAR', 'CEDDAR-IFS (supplementary)': 'CEDDAR', 'CEDDAR-IFS (seed 505)': 'CEDDAR, second run',
+  'SpateGAN-ERA5': 'Published SpateGAN',
+  'PEAK_HSP (target)': 'Radar', 'PEAK_HSP': 'Radar',
+  'PAGASA radar (provisional)': 'PAGASA radar'
+};
+const displayName = s => DISPLAY_NAMES[s] || String(s);
+// Model labels carry their training variant after "_" (SpateGAN-IFS_GFS-100); render it
+// as a subscript, keeping the selected-model star outside. Plain text (dropdowns) uses "-".
+const modelLabel = s => datasetLabel(displayName(s)).replace(/_([^\s*<]+)(\*?)/g, '<sub>$1</sub>$2');
+const plainLabel = s => displayName(s).replace(/_/g, '-');
+// GFS runs: seed 42 / 504 is run 1, seed 43 / 505 is run 2.
+const runNumber = seed => (/^(42|504)$/.test(String(seed)) ? 1 : /^(43|505)$/.test(String(seed)) ? 2 : seed);
+const gfsGroup = g => g === 'GFS-0' ? 'Without GFS pretraining' : g === 'GFS-100' ? 'With GFS pretraining' : g;
+const gfsRun = s => String(s).replace(/^(GFS-0|GFS-100), seed (\d+)$/, (_, g, seed) => `${gfsGroup(g)}, run ${runNumber(seed)}`);
+// Case-layer and case display names come from build-cases.py (LAYERS and the case label file).
+// The final operational model; CEDDAR-IFS is supplementary and off by default.
+const FINAL_MODEL = 'SpateGAN-IFS';
+const REGION_NAMES = { kr: 'South Korea', ind: 'Indonesia', ph: 'Philippines', gh: 'Ghana', to: 'Tonga' };
+// Generated scores (build-metrics.py, data-leadtime.js) join the hand-maintained tables.
+if (window.SCORES) Object.assign(window.METRICS, window.SCORES);
 const pad = n => String(n).padStart(2, '0');
 
 function addMinutes(iso, mins) {
@@ -26,17 +50,38 @@ function clockLabel(d) {
   return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} `
        + `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())} UTC`;
 }
+// A case's date, shown apart from its short name: the start of its UTC window.
+const caseStart = c => new Date(Date.parse((c.window && c.window[0]) || c.start));
+const caseDate = c => clockLabel(caseStart(c)).slice(0, 10);
+// A case's UTC window for the viewer meta line: "16 Jul 2025, 00:00–24:00 UTC", or with both
+// dates when the window starts mid-day: "10 May 2025, 12:00 – 11 May 2025, 12:00 UTC".
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const dayLabel = d => `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+const hourLabel = d => `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
+function caseRange(c) {
+  const a = caseStart(c);
+  const b = c.window && c.window[1] ? new Date(Date.parse(c.window[1])) : addMinutes(a.toISOString(), 24 * 60);
+  if (hourLabel(b) === '00:00' && b - a <= 864e5 && dayLabel(addMinutes(b.toISOString(), -1)) === dayLabel(a)) {
+    return `${dayLabel(a)}, ${hourLabel(a)}–24:00 UTC`;
+  }
+  return `${dayLabel(a)}, ${hourLabel(a)} – ${dayLabel(b)}, ${hourLabel(b)} UTC`;
+}
 
 /* ------------------------------------------------------------------ viewer */
 
 
 
+// Panels and layer buttons are ordered by role, then by the layer's own order.
+const ROLE_RANK = { input: 0, model: 1, target: 2, observed: 3, product: 4 };
+const byRole = (a, b) => ((ROLE_RANK[a.role] ?? 5) - (ROLE_RANK[b.role] ?? 5)) || ((a.order || 0) - (b.order || 0));
+
 class CaseViewer {
-  constructor(mount, { region, domain }) {
+  constructor(mount, { region, domain, cases, layers }) {
     this.mount = mount;
     this.region = region;
     this.domain = domain;
-    this.cases = window.CASES.filter(c => c.region === region);
+    this.only = layers;   // optional list of layer keys for the main-report viewers
+    this.cases = window.CASES.filter(c => c.region === region && (!cases || cases.includes(c.id)));
     this.caseIdx = 0;
     this.tick = 0;
     this.playing = false;
@@ -46,6 +91,7 @@ class CaseViewer {
     this.panels = [];
 
     const first = this.layersFor(this.cases[0]);
+    // Start with the default layers (a listed layer that is off by default stays a toggle).
     this.active = new Set(first.filter(l => l.def.default).map(l => l.key));
 
     this.render();
@@ -64,9 +110,10 @@ class CaseViewer {
 
   layersFor(c) {
     return Object.entries(c.layers)
-      .filter(([, def]) => def.domain === this.domain)
-      .map(([key, def]) => ({ key, def }))
-      .sort((a, b) => a.def.order - b.def.order);
+      .filter(([key, def]) => def.domain === this.domain && (!this.only || this.only.includes(key)))
+      // The Philippine radar is a visual reference, not a scoring target.
+      .map(([key, def]) => ({ key, def: key === 'radar-mp' && def.role === 'target' ? Object.assign({}, def, { role: 'observed' }) : def }))
+      .sort((a, b) => byRole(a.def, b.def));
   }
 
   get current() { return this.cases[this.caseIdx]; }
@@ -75,17 +122,21 @@ class CaseViewer {
     const bar = el('div', 'viewer-bar');
 
     const caseTabs = el('div', 'tabs');
+    caseTabs.setAttribute('aria-label', `${REGION_NAMES[this.region] || this.region} cases`);
     this.cases.forEach((c, i) => {
       const b = el('button', null, c.label || c.id);
+      b.title = `${c.title || c.label || c.id}, ${caseDate(c)}`;
       b.setAttribute('aria-selected', i === 0);
       b.onclick = () => this.selectCase(i);
       caseTabs.append(b);
     });
     this.caseTabs = caseTabs;
 
-    this.meta = el('div', 'viewer-meta');
-    bar.append(caseTabs, this.meta);
+    // Layer chips share the header row with the case tabs and wrap under them on narrow screens.
+    this.toggles = el('div', 'layer-toggles');
+    bar.append(caseTabs, this.toggles);
 
+    this.meta = el('div', 'viewer-meta');
     this.grid = el('div', 'panels');
 
     const controls = el('div', 'controls');
@@ -112,18 +163,17 @@ class CaseViewer {
     this.speed.onchange = () => { this.msPerTick = +this.speed.value; };
 
     this.clock = el('div', 'clock');
-    controls.append(this.playBtn, back, fwd, this.scrub, this.speed, this.clock);
+    controls.append(this.playBtn, back, fwd, this.scrub, this.clock, this.speed);
 
+    // Shown only while frames load, or when some failed.
     this.loadEl = el('div', 'loading');
 
-    this.toggles = el('div', 'layer-toggles');
-
-    // The colourbar belongs to the viewer, so it lives inside the pane.
+    // The colourbar belongs to the viewer, so it lives inside the pane, directly under the controls.
     this.cbar = el('div', 'cbar');
     colourbar(this.cbar);
 
-    const timingNote = el('p', 'timing-note', 'Three-hour totals stay fixed while the half-hour frames advance.');
-    this.mount.append(bar, this.toggles, this.grid, controls, timingNote, this.loadEl, this.cbar);
+    this.chart = el('div', 'station-chart');
+    this.mount.append(bar, this.meta, this.grid, controls, this.cbar, this.loadEl, this.chart);
   }
 
   selectCase(i) {
@@ -133,8 +183,27 @@ class CaseViewer {
     this.rebuildPanels();
   }
 
+  get stations() {
+    return (window.STATIONS || {})[`${this.region}:${this.current.id}`] || null;
+  }
+
+  // Station files load on demand; the viewer redraws once a case's file arrives.
+  loadStations() {
+    const key = `${this.region}:${this.current.id}`;
+    const url = (window.STATION_FILES || {})[key];
+    window.STATIONS = window.STATIONS || {};
+    if (!url || window.STATIONS[key] || (this._loading || new Set()).has(key)) return;
+    (this._loading = this._loading || new Set()).add(key);
+    fetch(url).then(r => r.ok ? r.json() : null).then(data => {
+      if (!data) return;
+      window.STATIONS[key] = data;
+      if (`${this.region}:${this.current.id}` === key) this.rebuildPanels();
+    }).catch(() => {});
+  }
+
   rebuildPanels() {
     const c = this.current;
+    this.loadStations();
     const layers = this.layersFor(c);
     if (!layers.some(l => this.active.has(l.key))) {
       layers.filter(l => l.def.default).forEach(l => this.active.add(l.key));
@@ -142,28 +211,61 @@ class CaseViewer {
     const shown = layers.filter(l => this.active.has(l.key));
 
     this.grid.innerHTML = '';
-    this.panels = shown.map(({ key, def }) => {
-      const p = el('div', 'panel' + (def.role === 'target' ? ' is-target' : ''));
+    // Stations never sit on the model maps. Korean AWS get their own panel; other point gauges get 48 km zoom
+    // panels around the gauges (one per input/model layer) plus a gauges-only panel.
+    const st = this.stations;
+    const stOn = this.stationsOn !== false;
+    const mode = st && stOn ? (st.source === 'kr_aws' ? 'panel' : 'zoom') : null;
+    const view = mode === 'zoom' ? zoomView(st, this.domain) : null;
+    const makePanel = (def, title, opts = {}) => {
+      const p = el('div', 'panel');
       const head = el('div', 'panel-head');
-      head.append(el('span', 'panel-title', noBreakParens(datasetLabel(def.label))),
-                  el('span', 'panel-role role-' + def.role, def.role));
-      const frame = el('div', 'frame');
-      if (def.base) frame.style.backgroundImage = `url("${def.base}")`;
-      const a = el('img'), b = el('img');
-      [a, b].forEach(img => { img.alt = def.label; img.decoding = 'sync'; });
-      a.classList.add('on');
-      frame.append(a, b, el('span', 'cadence', def.cadence === 30 ? '30 min' : '3 h'));
+      head.append(el('span', 'panel-title', noBreakParens(title)));
+      const frame = el('div', 'frame' + (def.native ? ' is-native' : '') + (opts.view ? ' is-zoom' : ''));
+      const holder = opts.view ? el('div', 'zoom-inner') : frame;
+      if (opts.view) {
+        const v = opts.view, k = 100 / v.w;
+        Object.assign(holder.style, { width: k + '%', height: k + '%', left: (-v.x0 * k) + '%', top: (-v.y0 * k) + '%' });
+        frame.append(holder);
+      }
+      if (def.base) holder.style.backgroundImage = `url("${def.base}")`;
+      const imgs = [];
+      if (def.frames) {
+        const a = el('img'), b = el('img');
+        [a, b].forEach(img => { img.alt = title; img.decoding = 'sync'; });
+        a.classList.add('on');
+        holder.append(a, b);
+        imgs.push(a, b);
+      }
+      frame.append(el('span', 'cadence', cadenceLabel(def.cadence)));
+      if (opts.box) frame.append(zoomBox(opts.box));
+      const dots = opts.dots ? stationLayer(st, this.domain, opts.view) : null;
+      if (dots) frame.append(dots.svg);
       p.append(head, frame);
       this.grid.append(p);
-      return { def, imgs: [a, b], cur: 0, url: null };
-    });
+      return { def, imgs, cur: 0, url: null, dots };
+    };
+    // Panel order follows the role: input, model(s), target, observed, then products such as DI Cast.
+    const items = shown.map(({ def }) => ({ def, title: modelLabel(def.label), opts: { box: view } }));
+    if (mode === 'panel') {
+      const base = shown[0] && shown[0].def.base;
+      items.push({ def: { role: 'observed', cadence: st.interval_seconds / 60, base, order: 0 }, title: 'AWS stations', opts: { dots: true } });
+    }
+    items.sort((p, q) => byRole(p.def, q.def));
+    this.panels = items.map(i => makePanel(i.def, i.title, i.opts));
+    if (mode === 'zoom') {
+      shown.filter(({ key }) => /^ifs-|-final$/.test(key)).forEach(({ def }) =>
+        this.panels.push(makePanel(def, `${plainLabel(modelLabel(def.label))}, 48 km zoom`, { view, dots: true })));
+      const base = shown[0] && shown[0].def.base;
+      this.panels.push(makePanel({ role: 'observed', cadence: st.interval_seconds / 60, base, native: true },
+        'Estate gauges, 48 km zoom', { view, dots: true }));
+    }
 
     // Toggle any layer while keeping at least one visible.
     this.toggles.innerHTML = '';
-    this.toggles.append(el('span', 'hint', 'Show tiles:'));
     layers.forEach(({ key, def }) => {
       const selected = this.active.has(key);
-      const button = el('button', selected ? '' : 'is-off', datasetLabel(def.label));
+      const button = el('button', selected ? '' : 'is-off', modelLabel(def.label));
       button.type = 'button';
       button.setAttribute('aria-pressed', String(selected));
       button.disabled = selected && shown.length === 1;
@@ -173,11 +275,35 @@ class CaseViewer {
       };
       this.toggles.append(button);
     });
+    // The station panels toggle like a layer; they are never the only thing shown.
+    if (st) {
+      const button = el('button', stOn ? '' : 'is-off', st.source === 'kr_aws' ? 'AWS stations' : 'Estate gauges');
+      button.type = 'button';
+      button.setAttribute('aria-pressed', String(stOn));
+      button.onclick = () => { this.stationsOn = !stOn; this.rebuildPanels(); };
+      this.toggles.append(button);
+    }
 
-    this.meta.textContent = `${shown.length} panels · 24 h from ${clockLabel(new Date(Date.parse(c.start)))}`;
+    this.meta.innerHTML = '';
+    this.meta.append(el('b', null, c.title || c.label || c.id), document.createTextNode(` · ${caseRange(c)}`));
+    this.stationChart();
     if (this.near) this.preload();
-    else this.loadEl.textContent = 'frames load when you scroll here';
+    else this.loadEl.innerHTML = '';
     this.paint();
+  }
+
+  stationChart() {
+    this.chart.innerHTML = '';
+    const s = (window.STATIONS || {})[`${this.region}:${this.current.id}`];
+    if (!s || !s.series_stations.length) return;
+    // Series are values at each station's own pixel, so both viewers show the same set.
+    // A page limited to some models (window.PAGE_MODELS) keeps only those and the references
+    // (window.PAGE_REFERENCES, default radar and DI Cast).
+    const keep = window.PAGE_MODELS;
+    const refs = window.PAGE_REFERENCES || ['PEAK_HSP', 'DI Cast'];
+    const names = Object.keys(s.series).filter(n => !SECOND_SEEDS.includes(n) && !DROPPED.includes(n)
+      && (!keep || keep.includes(n) || refs.includes(n)));
+    cumulativeChart(this.chart, s, names, this.domain);
   }
 
   frameIndex(def) {
@@ -186,14 +312,16 @@ class CaseViewer {
   }
 
   preload() {
-    const urls = this.panels.flatMap(p => p.def.base ? [p.def.base, ...p.def.frames] : p.def.frames);
+    const urls = [...new Set(this.panels.flatMap(p => [p.def.base, ...(p.def.frames || [])].filter(Boolean)))];
     let done = 0, failed = 0;
+    this.token = Symbol();
+    if (!urls.length) { this.loadEl.innerHTML = ''; return; }
     const bar = el('span', 'bar');
     const fill = el('i');
     bar.append(fill);
     this.loadEl.innerHTML = '';
     this.loadEl.append(bar, document.createTextNode(`loading ${urls.length} frames`));
-    const token = (this.token = Symbol());
+    const token = this.token;
     urls.forEach(u => {
       const img = new Image();
       const tally = (ok) => {
@@ -202,8 +330,8 @@ class CaseViewer {
         if (!ok) failed++;
         fill.style.width = (done / urls.length * 100) + '%';
         if (done === urls.length) this.loadEl.textContent = failed
-          ? `${done - failed}/${urls.length} frames loaded · ${failed} failed`
-          : `${urls.length} frames ready`;
+          ? `${failed} of ${urls.length} frames failed to load`
+          : '';
       };
       img.onload = () => tally(true);
       img.onerror = () => tally(false);
@@ -213,6 +341,7 @@ class CaseViewer {
 
   paint() {
     for (const p of this.panels) {
+      if (!p.def.frames) continue;
       const index = this.frameIndex(p.def);
       const url = p.def.frames[index];
       if (url === p.url) continue;
@@ -224,8 +353,15 @@ class CaseViewer {
       if (next.complete) swap();
     }
     const stamp = addMinutes(this.current.start, (this.tick + 1) * TICK_MIN);
+    const s = this.stations;
+    if (s) {
+      const end = stamp.getTime() / 1000;
+      const k = s.times.findIndex(t => t >= end);
+      for (const p of this.panels) if (p.dots) p.dots.paint(k < 0 ? null : k, s.interval_seconds);
+    }
     this.clock.textContent = clockLabel(stamp);
     this.scrub.value = this.tick;
+    if (this.chart._setTime) this.chart._setTime(stamp.getTime() / 1000);
   }
 
   seek(t) {
@@ -247,10 +383,186 @@ class CaseViewer {
   }
 }
 
+// 48 km window centred on the stations, as fractions of the panel (SpateGAN area 336 km, CEDDAR 256 km).
+const DOMAIN_KM = { spategan: 336, ceddar: 256 };
+function zoomView(s, domain) {
+  const pts = s.stations.map(st => domain === 'ceddar' ? st.ceddar : [st.fx, st.fy]).filter(Boolean);
+  if (!pts.length) return null;
+  const w = 48 / (DOMAIN_KM[domain] || 336);
+  const cx = (Math.min(...pts.map(p => p[0])) + Math.max(...pts.map(p => p[0]))) / 2;
+  const cy = (Math.min(...pts.map(p => p[1])) + Math.max(...pts.map(p => p[1]))) / 2;
+  const clamp = v => Math.max(0, Math.min(1 - w, v));
+  return { x0: clamp(cx - w / 2), y0: clamp(cy - w / 2), w };
+}
+// Outline of the zoom window on the full-area panels.
+function zoomBox(v) {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('class', 'zoom-box');
+  svg.setAttribute('viewBox', '0 0 1000 1000');
+  svg.setAttribute('preserveAspectRatio', 'none');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.append(svgEl('rect', { x: v.x0 * 1000, y: v.y0 * 1000, width: v.w * 1000, height: v.w * 1000 }));
+  return svg;
+}
+const cadenceLabel = m => m === 30 ? '30 min' : m === 60 ? '1 h' : m === 180 ? '3 h' : m + ' min';
+
+/* ---------------------------------------------------------------- stations */
+
+// Station observations as dots on each panel, coloured with the frame palette
+// (interval amount converted to mm/hour). Missing observations are hollow.
+function paletteColour(rate) {
+  const p = window.METRICS.palette;
+  if (rate == null) return null;
+  if (rate < p.bounds[0]) return 'transparent';
+  for (let i = p.levels.length - 1; i >= 0; i--) if (rate >= p.bounds[i]) return p.levels[i];
+  return p.levels[0];
+}
+
+function stationLayer(s, domain, view) {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('class', 'station-dots');
+  // Dots scale with the panel (about 3.6 px radius on a 300 px panel, as in the report stills);
+  // the outline stays thin at any size (non-scaling stroke).
+  svg.setAttribute('viewBox', '0 0 1000 1000');
+  svg.setAttribute('preserveAspectRatio', 'none');
+  const dots = [];
+  s.stations.forEach((st, i) => {
+    let pos = domain === 'ceddar' ? st.ceddar : [st.fx, st.fy];
+    if (!pos) return;
+    if (view) {
+      pos = [(pos[0] - view.x0) / view.w, (pos[1] - view.y0) / view.w];
+      if (pos.some(v => v < 0 || v > 1)) return;
+    }
+    const c = svgEl('circle', { cx: (pos[0] * 1000).toFixed(1), cy: (pos[1] * 1000).toFixed(1), r: view ? 27 : (s.stations.length > 40 ? 12 : 16) });
+    const title = svgEl('title'); c.append(title);
+    svg.append(c);
+    dots.push({ c, title, i, st });
+  });
+  return {
+    svg,
+    paint(k, seconds) {
+      for (const d of dots) {
+        const v = k == null ? null : d.st.values[k];
+        const colour = v == null ? null : paletteColour(v * 3600 / seconds);
+        d.c.setAttribute('class', v == null ? 'is-missing' : (colour === 'transparent' ? 'is-dry' : ''));
+        d.c.style.fill = colour && colour !== 'transparent' ? colour : '';
+        d.title.textContent = `${d.st.id}: ${v == null ? 'no observation' : v.toFixed(1) + ' mm'}`;
+      }
+    }
+  };
+}
+
+// Station-chart series: the final model is shown; CEDDAR starts hidden.
+const STATION_HIDDEN = new Set(['CEDDAR-IFS']);
+const STATION_STYLE = {
+  'IFS': { dash: '5 4' }, 'PEAK_HSP': { dash: '2 3', colour: 'IFS' }, 'DI Cast': { dash: '2 3' },
+  'SpateGAN-IFS': { width: 2.6 }
+};
+const STATION_ORDER = ['IFS', 'PEAK_HSP', 'DI Cast', 'SpateGAN-IFS', 'CEDDAR-IFS'];
+
+// Cumulative rainfall at one station: observations against each source at the
+// pixel containing the station. Totals make 30-minute, hourly and three-hour
+// sources directly comparable.
+function cumulativeChart(mount, s, names, domain) {
+  const state = mount._state || (mount._state = { station: s.series_stations[0], hidden: new Set(STATION_HIDDEN) });
+  if (!s.series_stations.includes(state.station)) state.station = s.series_stations[0];
+  const rank = n => { const i = STATION_ORDER.indexOf(n); return i < 0 ? 99 : i; };
+  names = [...names].sort((a, b) => rank(a) - rank(b));
+  // Whole millimetres; one decimal for small non-zero totals (e.g. 0.3 mm).
+  const mm = v => (v > 0 && v < 1 ? v.toFixed(1) : v.toFixed(0)) + ' mm';
+  const draw = () => {
+    mount.innerHTML = '';
+    const bar = el('div', 'chart-controls');
+    bar.append(picker('Station', s.series_stations.map(id => {
+      const st = s.stations.find(x => x.id === id);
+      return { value: id, label: `${s.source === 'kr_aws' ? 'AWS' : 'Gauge'} ${id} · ${mm(st.total)} in 24 h` };
+    }), state.station, v => { state.station = v; draw(); }));
+    mount.append(bar);
+    const st = s.stations.find(x => x.id === state.station);
+    const series = [];
+    // Accumulate only intervals ending inside the case window (IFS files span 48 hours).
+    const w0 = s.times[0] - s.interval_seconds, w1 = s.times[s.times.length - 1];
+    const cum = (times, vals) => { let acc = 0, any = false; return times.map((t, i) => ({ t, v: vals[i] })).filter(p => p.t > w0 && p.t <= w1)
+      .map(p => { if (p.v != null) { acc += p.v; any = true; } return { t: p.t, v: any ? acc : null }; }); };
+    series.push({ name: s.source === 'kr_aws' ? 'AWS station' : 'Gauge', colour: 'var(--ink)', width: 3, points: cum(s.times, st.values) });
+    for (const name of names) {
+      const entry = s.series[name] && s.series[name].stations[state.station];
+      if (!entry) continue;
+      const style = STATION_STYLE[name] || {};
+      series.push({ name, key: name, colour: colourOf(style.colour || name), dash: style.dash || null,
+                    width: style.width || 1.6, points: cum(s.series[name].times, entry.mean) });
+    }
+    // Totals line: last cumulative value of each series currently shown.
+    const totals = series.filter(sr => !state.hidden.has(sr.key)).map(sr => {
+      const last = sr.points.filter(p => p.v != null).pop();
+      return `${modelLabel(sr.name)} ${last ? mm(last.v) : '–'}`;
+    });
+    mount.append(el('p', 'chart-totals', '24-hour total at this station: ' + totals.join(' · ')));
+    // Size from the container (capped like the other charts); a hidden container falls back to 760.
+    const W = Math.max(280, Math.min(760, mount.clientWidth || 760)), H = W < 500 ? 280 : 250, L = 52, R = 16, T = 14, B = 46;
+    const t0 = s.times[0] - s.interval_seconds, t1 = s.times[s.times.length - 1];
+    const hi = Math.max(1, ...series.filter(x => !state.hidden.has(x.key)).flatMap(x => x.points.map(p => p.v || 0))) * 1.08;
+    const x = t => L + (t - t0) / (t1 - t0) * (W - L - R), y = v => T + (H - T - B) * (1 - v / hi);
+    const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, class: 'chart-svg', role: 'img' });
+    niceTicks(0, hi).forEach(v => {
+      svg.append(svgEl('line', { x1: L, x2: W - R, y1: y(v), y2: y(v), stroke: 'var(--line-2)' }));
+      const lab = svgEl('text', { x: L - 8, y: y(v) + 4, 'text-anchor': 'end', class: 'chart-tick' }); lab.textContent = v; svg.append(lab);
+    });
+    for (let h = 0; h <= 24; h += 6) {
+      const t = t0 + h * 3600, lab = svgEl('text', { x: x(t), y: H - B + 18, 'text-anchor': 'middle', class: 'chart-tick' });
+      lab.textContent = new Date(t * 1000).toISOString().slice(11, 16); svg.append(lab);
+    }
+    const ax = svgEl('text', { x: L + (W - L - R) / 2, y: H - 8, 'text-anchor': 'middle', class: 'chart-axis' });
+    ax.textContent = 'Time (UTC)'; svg.append(ax);
+    const ay = svgEl('text', { x: 0, y: 0, 'text-anchor': 'middle', class: 'chart-axis',
+                               transform: `translate(14 ${T + (H - T - B) / 2}) rotate(-90)` });
+    ay.textContent = 'Rain so far (mm)'; svg.append(ay);
+    for (const sr of series) {
+      const pts = sr.points.filter(p => p.v != null);
+      if (!pts.length || state.hidden.has(sr.key)) continue;
+      const d = pts.map((p, i) => (i ? 'L' : 'M') + x(p.t).toFixed(1) + ' ' + y(p.v).toFixed(1)).join(' ');
+      svg.append(svgEl('path', Object.assign({ d, fill: 'none', stroke: sr.colour, 'stroke-width': sr.width, 'stroke-linejoin': 'round' },
+                                             sr.dash ? { 'stroke-dasharray': sr.dash } : {})));
+    }
+    // Time line: follows the viewer's clock (set through mount._setTime).
+    const now = svgEl('line', { y1: T, y2: H - B, class: 'chart-now' });
+    svg.append(now);
+    mount._setTime = t => {
+      const c = Math.max(t0, Math.min(t1, t));
+      now.setAttribute('x1', x(c).toFixed(1)); now.setAttribute('x2', x(c).toFixed(1));
+      mount._time = t;
+    };
+    if (mount._time != null) mount._setTime(mount._time); else mount._setTime(t0);
+    mount.append(svg);
+    // Observations always show; every other series is a toggle in the legend.
+    const legend = el('div', 'chart-legend');
+    series.forEach(sr => {
+      const text = modelLabel(sr.name);
+      const swatch = Object.assign(el('i'), { style: `background:${sr.colour}` });
+      if (!sr.key) {
+        const b = el('span', 'legend-item');
+        b.append(swatch, el('span', null, text));
+        legend.append(b);
+        return;
+      }
+      const off = state.hidden.has(sr.key);
+      const b = el('button', 'legend-item' + (off ? ' is-off' : ''));
+      b.type = 'button';
+      b.setAttribute('aria-pressed', String(!off));
+      b.append(swatch, el('span', null, text));
+      b.onclick = () => { off ? state.hidden.delete(sr.key) : state.hidden.add(sr.key); draw(); };
+      legend.append(b);
+    });
+    mount.append(legend);
+  };
+  draw();
+}
+
 /* ------------------------------------------------------------------ tables */
 
 function summaryTable(key) {
   const data = window.METRICS.summary[key];
+  if (!data) return document.createDocumentFragment();
   // Headers carry their units and wrap to two lines; the column then sizes to
   // the longest word rather than the whole string.
   const dir = d => '&nbsp;<span class="dir">' + (d === 'up' ? '&uarr;' : '&darr;') + '</span>';
@@ -265,19 +577,15 @@ function summaryTable(key) {
   thead.append(hr);
   const tb = el('tbody');
   data.rows.forEach(r => {
-    const tr = el('tr', r.ref ? 'is-ref' : r.best ? 'is-best' : '');
-    tr.append(el('td', null, noBreakParens(r.model)));
+    const tr = el('tr', r.ref ? 'is-ref' : r.best ? 'is-best' : (r.pilot || r.comparison) ? 'is-pilot' : '');
+    tr.append(el('td', null, noBreakParens(modelLabel(r.model))));
     cols.forEach(([k]) => tr.append(el('td', 'num', fmt4(r[k]))));
     tb.append(tr);
   });
   t.append(thead, tb);
   const wrap = el('div', 'tw');
   wrap.append(t);
-  const box = document.createDocumentFragment();
-  box.append(wrap, el('p', 'tnote',
-    'MAE and CRPS are in <span class="nb">mm per three hours</span>; the detection '
-    + 'and FSS scores are dimensionless. ' + data.note));
-  return box;
+  return wrap;
 }
 
 function simpleTable(rows, cols) {
@@ -289,7 +597,7 @@ function simpleTable(rows, cols) {
   rows.forEach(r => {
     const tr = el('tr');
     cols.forEach(c => tr.append(el('td', c.num ? 'num' : '',
-      r[c.key] == null ? PENDING : noBreakParens(String(r[c.key])))));
+      r[c.key] == null ? PENDING : noBreakParens(c.key === 'model' ? modelLabel(r[c.key]) : String(r[c.key])))));
     tb.append(tr);
   });
   t.append(thead, tb);
@@ -298,9 +606,12 @@ function simpleTable(rows, cols) {
   return wrap;
 }
 
+// Slim colour scale: one strip, the bin edges under it and the unit at its right end.
+// What the colours mean is explained in the page text.
 function colourbar(mount) {
   const p = window.METRICS.palette;
   const n = p.levels.length;
+  mount.classList.add('cbar');
 
   const strip = el('div', 'cbar-strip');
   p.levels.forEach(c => { const i = el('i'); i.style.background = c; strip.append(i); });
@@ -315,65 +626,66 @@ function colourbar(mount) {
     ticks.append(s);
   });
 
-  const keys = el('div', 'cbar-keys');
-  const swatch = (colour, label) => {
-    const k = el('span', 'cbar-key');
-    const box = el('i');
-    if (colour) box.style.background = colour;
-    else box.classList.add('is-clear');
-    k.append(box, document.createTextNode(label));
-    return k;
-  };
-  keys.append(swatch(null, 'below 0.1 mm, unshaded'),
-              swatch(p.missing, 'missing observation'));
-
-  mount.append(strip, ticks, keys);
-  mount.append(el('p', 'cbar-note',
-    'Rainfall accumulation in mm. The same scale is used for the half-hour and three-hour panels, '
-    + 'so a three-hour field accumulates over six times the window of a half-hour field.'));
+  mount.append(strip, el('span', 'cbar-unit', 'mm/h'), ticks);
 }
 
 
 /* ----------------------------------------------------------- numbering */
 
-const ROMAN = [[10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I']];
-function roman(n) {
-  let out = '';
-  for (const [v, s] of ROMAN) while (n >= v) { out += s; n -= v; }
-  return out;
-}
-
-// Figures are numbered 1, 2, 3 with the label below; tables I, II, III with the
+// Figures are numbered 1, 2, 3 with the label below; tables 1, 2, 3 with the
 // label above. The interactive case viewers are deliberately left unnumbered.
 function numberExhibits() {
-  document.querySelectorAll('figure > figcaption').forEach((cap, i) => {
-    cap.innerHTML = '<b>Fig. ' + (i + 1) + '.</b> ' + cap.innerHTML;
+  const supp = n => !!n.closest('#supplementary');
+  const count = { fig: [0, 0], tab: [0, 0] };
+  document.querySelectorAll('figure > figcaption').forEach(cap => {
+    const s = supp(cap) ? 1 : 0, n = ++count.fig[s];
+    cap.innerHTML = '<b>Fig. ' + (s ? 'S' + n : n) + '.</b> ' + cap.innerHTML;
   });
-  document.querySelectorAll('table').forEach((tbl, i) => {
+  document.querySelectorAll('table').forEach(tbl => {
     const host = tbl.closest('.tw') || tbl;
     const src = tbl.closest('[data-caption]');
     const caption = src ? ' ' + src.dataset.caption : '';
+    const s = supp(tbl) ? 1 : 0, n = ++count.tab[s];
     const label = el('div', 'table-label',
-      '<b>Table ' + roman(i + 1) + '.</b>' + datasetLabel(caption));
-    host.parentNode.insertBefore(label, host);
+      '<b>Table ' + (s ? 'S' + n : n) + '.</b>' + modelLabel(caption));
+    // A redrawn table (the FSS grid) keeps its label; data-key adds a short colour key to it.
+    if (src && src.dataset.key) label.append(el('span', 'cap-key', ' ' + src.dataset.key));
+    if (src) src._caption = label;
+    const parent = host.parentNode, next = host.nextSibling;
+    const box = exhibit(label, host);
+    parent.insertBefore(box, next);
+    // A lettered footnote directly after the table moves into the box, so it lines up with the table.
+    const after = box.nextElementSibling;
+    if (after && after.classList.contains('table-note')) box.append(after);
   });
+}
+
+// Label and table share one box, so the label is exactly as wide as the table
+// (or the screen, when a wide table scrolls sideways under it).
+function exhibit(label, table) {
+  const box = el('div', 'exhibit');
+  box.append(label, table);
+  return box;
 }
 
 /* --------------------------------------------------------------- compare */
 
-// Before/after slider: IFS shows left of the divider, CEDDAR-PEAK right of it, for one three-hour window.
+// Before/after slider: IFS shows left of the divider and the final model right of it, at one time.
+// data-lo / data-hi pick the layers (default: IFS and SpateGAN-IFS on the SpateGAN area).
 // Drag with a mouse or finger; the hidden range input gives keyboard control and an accessible name.
 // All sliders on the page move together, so every region is compared at the same split.
 const compareGroup = [];
 function compareSlider(node) {
   const [region, id, stamp] = node.dataset.compare.split(':');
   const c = window.CASES.find(x => x.region === region && x.id === id);
+  const loKey = node.dataset.lo || 'ifs-spategan', hiKey = node.dataset.hi || 'spategan-final';
+  const hiName = plainLabel(c.layers[hiKey].label);
   const side = (key, cls) => {
     const layer = c.layers[key];
-    const div = el('div', 'compare-side ' + cls);
+    const div = el('div', 'compare-side ' + cls + (layer.native ? ' is-native' : ''));
     if (layer.base) div.style.backgroundImage = `url("${layer.base}")`;
     const img = el('img');
-    img.alt = `${layer.label}, ${node.dataset.name}`;
+    img.alt = `${plainLabel(layer.label)}, ${node.dataset.name}`;
     img.loading = 'lazy';
     img.src = layer.frames[layer.stamps.indexOf(stamp)];
     div.append(img);
@@ -382,10 +694,10 @@ function compareSlider(node) {
   const frame = el('div', 'compare-frame');
   const range = el('input', 'compare-range');
   Object.assign(range, { type: 'range', min: 0, max: 100, value: 50 });
-  range.setAttribute('aria-label', `Divider between IFS and CEDDAR, ${node.dataset.name}`);
-  const tagLo = el('span', 'compare-tag is-left', 'IFS <span class="compare-res">24 km</span>');
-  const tagHi = el('span', 'compare-tag is-right', 'CEDDAR <span class="compare-res">2 km</span>');
-  frame.append(side('ceddar-peak-0019', 'is-hi'), side('ifs-ceddar', 'is-lo'), el('div', 'compare-handle'),
+  range.setAttribute('aria-label', `Divider between IFS and ${hiName}, ${node.dataset.name}`);
+  const tagLo = el('span', 'compare-tag is-left', '24 km');
+  const tagHi = el('span', 'compare-tag is-right', '2 km');
+  frame.append(side(hiKey, 'is-hi'), side(loKey, 'is-lo'), el('div', 'compare-handle'),
     tagLo, tagHi, range);
 
   // A label shows only while its own side is visible under it.
@@ -405,8 +717,9 @@ function compareSlider(node) {
     const r = frame.getBoundingClientRect();
     set((e.clientX - r.left) / r.width * 100);
   };
-  range.oninput = () => set(+range.value);
+  range.oninput = () => { compareTouched = true; set(+range.value); };
   frame.addEventListener('pointerdown', e => {
+    compareTouched = true;
     frame.setPointerCapture(e.pointerId);
     fromPointer(e);
   });
@@ -417,6 +730,40 @@ function compareSlider(node) {
   node.append(frame, el('div', 'compare-cap', `<b>${node.dataset.name}</b><br><span class="nb">${clockLabel(end)}</span>`));
   set(50);   // after the frame is in the page, so label positions can be measured
   if (compareGroup.length === 1) addEventListener('resize', () => compareGroup.forEach(f => f()));
+}
+
+// Until someone moves a divider, the sliders sweep 50 -> 30 -> 70 -> 50 % when they scroll into view, and once more
+// after a pause if still untouched, so readers see that they move. Never with reduced motion; at most four sweeps.
+let compareTouched = false;
+function compareHint(fig) {
+  if (!fig || !compareGroup.length || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const path = [50, 30, 70, 50], ease = t => t < .5 ? 2 * t * t : 1 - (2 - 2 * t) ** 2 / 2;
+  let left = 4, visible = false, running = false;
+  const sweep = () => new Promise(done => {
+    const t0 = performance.now();
+    const step = now => {
+      if (compareTouched) return done();
+      const p = Math.min(1, (now - t0) / 2400), seg = Math.min(2, Math.floor(p * 3));
+      const v = path[seg] + (path[seg + 1] - path[seg]) * ease(p * 3 - seg);
+      compareGroup.forEach(f => f(v));
+      p < 1 ? requestAnimationFrame(step) : done();
+    };
+    requestAnimationFrame(step);
+  });
+  const run = async () => {
+    if (running) return;
+    running = true;
+    for (let i = 0; i < 2 && left > 0 && visible && !compareTouched; i++) {
+      left--;
+      await sweep();
+      await new Promise(r => setTimeout(r, 3000));
+    }
+    running = false;
+  };
+  new IntersectionObserver(([e]) => {
+    visible = e.isIntersecting;
+    if (visible) setTimeout(run, 600);
+  }, { threshold: .5 }).observe(fig);
 }
 
 /* ---------------------------------------------------------------- chrome */
@@ -434,15 +781,15 @@ function chrome() {
   const links = new Map();
   document.querySelectorAll('.nav a[href^="#"]').forEach(a => links.set(a.getAttribute('href').slice(1), a));
   const testsSummary = document.querySelector('.nav-tests summary');
-  links.set('crossproject', testsSummary);
+  if (testsSummary) links.set('supplementary', testsSummary);
   const sections = [...document.querySelectorAll('[id]')].filter(node => links.has(node.id));
   if (!sections.length) return;
   const sync = () => {
     let active = sections[0];
     for (const s of sections) if (s.getBoundingClientRect().top <= 140) active = s;
-    links.forEach(a => a.classList.remove('is-active'));
+    links.forEach(a => a && a.classList.remove('is-active'));
     links.get(active.id)?.classList.add('is-active');
-    testsSummary.classList.toggle('is-active', ['indonesia', 'crossproject', 'philippines', 'ghana'].includes(active.id));
+    testsSummary?.classList.toggle('is-active', active.id === 'supplementary');
   };
   addEventListener('scroll', sync, { passive: true });
   sync();
@@ -451,47 +798,124 @@ function chrome() {
 /* ------------------------------------------------------------------ init */
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Key findings: the bold lead becomes the label column, the rest of the item the finding.
+  document.querySelectorAll('.key-results > li').forEach(li => {
+    const lead = li.firstElementChild;
+    if (!lead || !/^(B|STRONG)$/.test(lead.tagName) || li.firstChild !== lead) return;
+    const text = el('span', 'kr-text');
+    while (lead.nextSibling) text.append(lead.nextSibling);
+    text.innerHTML = text.innerHTML.replace(/^[\s:]+/, '');
+    lead.classList.add('kr-label');
+    lead.textContent = lead.textContent.replace(/\.$/, '');
+    li.append(text);
+  });
+  // A page can limit every score table and chart to some models (window.PAGE_MODELS); IFS rows always stay.
+  const keep = window.PAGE_MODELS;
+  if (keep) {
+    Object.values(window.METRICS.summary || {}).forEach(t => {
+      t.rows = t.rows.filter(r => r.ref || keep.includes(r.model));
+      if (t.note) t.note = t.note.replace(/\s*Shaded rows?[^.]*\./, '');
+    });
+    ['LEADTIME', 'BYTHRESHOLD'].forEach(k => { if (window[k]) window[k] = window[k].filter(r => keep.includes(r.model)); });
+  }
+  // The previous selection is dropped from every table, chart and grid.
+  const M0 = window.METRICS;
+  const keepRow = r => !DROPPED.includes(r.model);
+  Object.values(M0.summary || {}).forEach(t => {
+    t.rows = t.rows.filter(keepRow);
+    t.note = (t.note || '')
+      .replace('Shaded rows are comparisons: the previous selection and the released SpateGAN-ERA5', 'The shaded row is a comparison: the published SpateGAN')
+      .replace(/\s*Shaded row: the previous CEDDAR selection[^.]*\./, '')
+      .replace('CEDDAR-IFS is GFS-0 seed 504', 'CEDDAR is run 1 without GFS pretraining');
+  });
+  ['LEADTIME', 'BYTHRESHOLD'].forEach(k => { if (window[k]) window[k] = window[k].filter(keepRow); });
+  // Second training runs go to the supplement: each score table gets a "-seeds" copy (IFS and both runs);
+  // the main tables, charts, grids and the half-hour and spread tables keep run 1 only.
+  Object.keys(M0.summary || {}).forEach(k => {
+    const t = M0.summary[k];
+    M0.summary[k + '-seeds'] = Object.assign({}, t, {
+      rows: t.rows.filter(r => r.ref || !COMPARISONS.includes(r.model)),
+      note: (t.note || '').replace(/\s*(Shaded rows?|The shaded row)[^.]*\./, '')
+    });
+    t.rows = t.rows.filter(r => !SECOND_SEEDS.includes(r.model));
+  });
+  const mainRow = r => keepRow(r) && !SECOND_SEEDS.includes(r.model);
+  ['halfHour', 'spread'].forEach(k => { if (M0[k]) M0[k] = M0[k].filter(mainRow); });
+  Object.values(M0.fssGrid || {}).forEach(g => Object.keys(g).forEach(m => { if (!mainRow({ model: m })) delete g[m]; }));
   // Only use explicitly available compressed copies.
   const optimized = window.OPTIMIZED_IMAGES || {};
   // The published copy splits each sequence into one basemap per folder and rain-only overlays.
   const bases = window.FRAME_BASES || {};
-  window.CASES.forEach(c => Object.values(c.layers).forEach(layer => {
+  window.CASES.forEach(c => Object.entries(c.layers).forEach(([key, layer]) => {
     layer.frames = layer.frames.map(url => optimized[url] || url);
-    layer.base = bases[layer.frames[0]?.replace(/[^/]*$/, '')];
+    layer.base = layer.base || bases[layer.frames[0]?.replace(/[^/]*$/, '')];
   }));
 
   document.querySelectorAll('[data-compare]').forEach(compareSlider);
+  compareHint(document.querySelector('.compare-grid'));
   document.querySelectorAll('.compare-cbar').forEach(colourbar);
 
   document.querySelectorAll('[data-viewer]').forEach(node => {
     const [region, domain] = node.dataset.viewer.split(':');
-    new CaseViewer(node, { region, domain });
+    const list = k => node.dataset[k] ? node.dataset[k].split(',') : null;
+    new CaseViewer(node, { region, domain, cases: list('cases'), layers: list('layers') });
   });
 
-  document.querySelectorAll('[data-summary]').forEach(n => n.append(summaryTable(n.dataset.summary)));
+  const UNITS = 'MAE and CRPS in mm per three hours.';
+  document.querySelectorAll('[data-summary]').forEach(n => {
+    const cap = (n.dataset.caption || '').trim();
+    if (!/mm per three hours/.test(cap)) n.dataset.caption = (cap ? cap + ' ' : '') + UNITS;
+    n.append(summaryTable(n.dataset.summary));
+  });
 
   const M = window.METRICS;
-  document.querySelector('[data-table="samples"]').append(simpleTable(M.samples, [
+  const tableAt = (key, rows, cols) => {
+    const n = document.querySelector(`[data-table="${key}"]`);
+    if (n) n.append(simpleTable(rows, cols));
+  };
+  tableAt('samples', M.samples, [
     { key: 'model', label: 'Model' }, { key: 'unit', label: 'One training sample' },
-    { key: 'train', label: 'Training samples', num: true }, { key: 'val', label: 'Validation samples', num: true }]));
-
-  document.querySelector('[data-table="blocks"]').append(simpleTable(M.validationBlocks, [
+    { key: 'train', label: 'IFS training samples', num: true }, { key: 'val', label: 'Validation samples', num: true },
+    { key: 'test', label: 'Reserved test samples', num: true }]);
+  tableAt('blocks', M.validationBlocks, [
     { key: 'block', label: 'Validation block' },
-    { key: 'start', label: 'Start (UTC, inclusive)' }, { key: 'end', label: 'End (UTC, exclusive)' }]));
-
-  document.querySelector('[data-table="training"]').append(simpleTable(M.training, [
-    { key: 'model', label: 'Model' }, { key: 'completed', label: 'Completed training' },
+    { key: 'start', label: 'Start' }, { key: 'end', label: 'End' }]);
+  tableAt('training', M.training, [
+    { key: 'model', label: 'Model' }, { key: 'completed', label: 'Training per stage' },
     { key: 'gpu', label: 'GPU' }, { key: 'batch', label: 'Batch size', num: true },
-    { key: 'wall', label: 'Full run time', num: true }, { key: 'gpuHours', label: 'GPU-hours', num: true }]));
-
-  document.querySelector('[data-table="inference"]').append(simpleTable(M.inference, [
+    { key: 'wall', label: 'Time per stage', num: true }, { key: 'gpuHours', label: 'GPU-hours, all runs', num: true }]);
+  tableAt('inference', M.inference, [
     { key: 'model', label: 'Model' }, { key: 'params', label: 'Parameters (M)', num: true },
-    { key: 'gflops', label: 'Est. GFLOPs / sample', num: true }, { key: 'perSample', label: 'Inference / sample (s)', num: true },
-    { key: 'mem', label: 'Peak GPU memory (GiB)', num: true }, { key: 'perCase', label: 'Inference / 24-h case (s)', num: true }]));
-
-  document.querySelector('[data-table="thresholds"]').append(simpleTable(M.thresholds, [
+    { key: 'gflops', label: 'GFLOPs per<br>sample (est.)', num: true }, { key: 'perSample', label: 'Inference per<br>sample (s)', num: true },
+    { key: 'mem', label: 'Peak GPU<br>memory (GiB)', num: true }, { key: 'perCase', label: 'Inference per<br>case (s)', num: true }]);
+  tableAt('thresholds', M.thresholds, [
     { key: 'hourly', label: 'Threshold (mm/hour)', num: true },
-    { key: 'threeHour', label: 'Converted (mm per 3 hours)', num: true }]));
+    { key: 'threeHour', label: 'As a three-hour amount (mm)', num: true }]);
+
+  tableAt('halfhour', M.halfHour, [
+    { key: 'model', label: 'Model' }, { key: 'mae', label: 'MAE (mm/30 min) ↓', num: true },
+    { key: 'pod', label: 'POD-M ↑', num: true }, { key: 'far', label: 'FAR-M ↓', num: true },
+    { key: 'csi', label: 'CSI-M ↑', num: true }, { key: 'fss', label: 'Ensemble FSS ↑', num: true },
+    { key: 'crps', label: 'CRPS (mm/30 min) ↓', num: true }]);
+  tableAt('spread', M.spread, [
+    { key: 'model', label: 'Model' }, { key: 'spread', label: 'Ensemble spread (mm/3 h)', num: true },
+    { key: 'mae', label: 'MAE (mm/3 h)', num: true }, { key: 'coverage', label: '10–90% interval coverage', num: true }]);
+  tableAt('gfs-design', M.gfs.design.map(r => Object.assign({}, r, { group: gfsGroup(r.group) })), [
+    { key: 'group', label: 'Group' }, { key: 'first', label: 'Stage 1 (GFS)' }, { key: 'second', label: 'Stage 2 (IFS)' }]);
+  tableAt('gfs-counts', M.gfs.counts, [
+    { key: 'split', label: 'Split' }, { key: 'dates', label: 'Dates' },
+    { key: 'spategan', label: 'SpateGAN samples', num: true }, { key: 'ceddar', label: 'CEDDAR samples', num: true }]);
+  tableAt('gfs-decision', M.gfs.decision.map(r => Object.assign({}, r, { seed: runNumber(r.seed) })), [
+    { key: 'model', label: 'Model' }, { key: 'seed', label: 'Run', num: true },
+    { key: 'fssWithout', label: 'FSS without GFS', num: true }, { key: 'fssWith', label: 'FSS with GFS', num: true },
+    { key: 'dfss', label: 'ΔFSS', num: true }, { key: 'ci', label: '95% CI', num: true },
+    { key: 'dcrps', label: 'ΔCRPS', num: true }, { key: 'dcsi', label: 'ΔCSI', num: true },
+    { key: 'dbias', label: 'Δ|volume bias|', num: true }]);
+  tableAt('candidates', M.candidates.map(r => Object.assign({}, r, { run: gfsRun(r.run), step: r.pick ? r.step + ' (pick)' : r.step })), [
+    { key: 'run', label: 'Run' }, { key: 'step', label: 'Step' }, { key: 'fss', label: 'Ensemble FSS ↑', num: true },
+    { key: 'crps', label: 'CRPS ↓', num: true }, { key: 'csi', label: 'CSI-M ↑', num: true },
+    { key: 'mae', label: 'MAE ↓', num: true }, { key: 'ratio', label: 'Rain ratio', num: true }]);
+  document.querySelectorAll('[data-fss-grid]').forEach(n => fssGridTable(n, n.dataset.fssGrid));
 
   // The report revision date is maintained in index.html, separately from metrics.
   document.querySelectorAll('[data-chart]').forEach(n => relativeChart(n, n.dataset.chart));
@@ -527,6 +951,15 @@ function theme() {
 /* ----------------------------------------------------------------- chart */
 
 const CHART_COLOURS = ['#4e79a7', '#e8912a', '#4f9d55', '#d1544f'];
+// One colour per model across every chart. The final model is blue, its second run a
+// lighter blue; CEDDAR is orange; the published SpateGAN is green.
+const MODEL_COLOURS = {
+  'IFS': 'var(--ink-3)',
+  'SpateGAN-IFS': '#4e79a7', 'SpateGAN-IFS (seed 43)': '#6d8fb8',
+  'CEDDAR-IFS': '#e8912a', 'CEDDAR-IFS (seed 505)': '#f2c48d',
+  'SpateGAN-ERA5': '#4f9d55'
+};
+const colourOf = m => MODEL_COLOURS[m] || 'var(--ink-3)';
 const CHART_METRICS = [
   { key: 'mae',  label: 'MAE',      better: 'lower'  },
   { key: 'pod',  label: 'POD-M',    better: 'higher' },
@@ -557,6 +990,7 @@ function niceTicks(min, max) {
    "up" always means better. */
 function relativeChart(mount, familyKey) {
   const data = window.METRICS.summary[familyKey];
+  if (!data) return;
   const ref = data.rows.find(r => r.ref);
   const models = data.rows.filter(r => !r.ref);
   if (!ref || !models.length) return;
@@ -611,11 +1045,11 @@ function relativeChart(mount, familyKey) {
         const top = Math.min(y(g), y(0)), h = Math.abs(y(g) - y(0));
         const rect = svgEl('rect', {
           x: x0 + si * bw, y: top, width: Math.max(bw - 3, 1), height: Math.max(h, 1),
-          fill: CHART_COLOURS[idx % CHART_COLOURS.length], rx: 2, class: 'chart-bar'
+          fill: colourOf(row.model), rx: 2, class: 'chart-bar'
         });
         rect.addEventListener('mousemove', e => {
           const b = mount.getBoundingClientRect();
-          tip.innerHTML = `<b>${row.model}</b><br>${m.label}: ${row[m.key].toFixed(4)}`
+          tip.innerHTML = `<b>${modelLabel(row.model)}</b><br>${m.label}: ${row[m.key].toFixed(4)}`
             + `<br>IFS: ${ref[m.key].toFixed(4)}`
             + `<br><b>${g >= 0 ? '+' : ''}${(g * 100).toFixed(1)}%</b> ${g >= 0 ? 'better' : 'worse'} than IFS`;
           tip.style.left = (e.clientX - b.left) + 'px';
@@ -640,8 +1074,8 @@ function relativeChart(mount, familyKey) {
       const b = el('button');
       b.type = 'button';
       if (hidden.has(i)) b.classList.add('is-off');
-      b.append(Object.assign(el('i'), { style: `background:${CHART_COLOURS[i % CHART_COLOURS.length]}` }),
-               document.createTextNode(row.model));
+      b.append(Object.assign(el('i'), { style: `background:${colourOf(row.model)}` }),
+               el('span', null, modelLabel(row.model)));
       b.onclick = () => {
         hidden.has(i) ? hidden.delete(i) : hidden.add(i);
         if (hidden.size === models.length) hidden.delete(i);
@@ -662,15 +1096,17 @@ function relativeChart(mount, familyKey) {
    rain each model produces, and in how many places. IFS is shown as a bar
    here rather than as the baseline, because the baseline is the observation. */
 const RATIO_METRICS = [
-  { key: 'ratio', label: 'Rainfall total ratio' },
+  { key: 'ratio', label: 'Rain ratio' },
   { key: 'fbias', label: 'Frequency bias' }
 ];
 
 function ratioChart(mount, familyKey) {
-  const rows = window.METRICS.summary[familyKey].rows.filter(r => r.ratio != null);
+  const data = window.METRICS.summary[familyKey];
+  if (!data) return;
+  const rows = data.rows.filter(r => r.ratio != null);
   if (!rows.length) return;
   const hidden = mount._hidden || (mount._hidden = new Set());
-  const colour = r => (r.ref ? 'var(--ink-3)' : CHART_COLOURS[rows.filter(x => !x.ref).indexOf(r) % CHART_COLOURS.length]);
+  const colour = r => colourOf(r.model);
 
   const draw = () => {
     mount.innerHTML = '';
@@ -714,7 +1150,7 @@ function ratioChart(mount, familyKey) {
         rect.addEventListener('mousemove', e => {
           const b = mount.getBoundingClientRect();
           const off = ((v - 1) * 100).toFixed(1);
-          tip.innerHTML = `<b>${row.model}</b><br>${m.label}: ${v.toFixed(4)}`
+          tip.innerHTML = `<b>${modelLabel(row.model)}</b><br>${m.label}: ${v.toFixed(4)}`
             + `<br>${v >= 1 ? 'produces ' + off + '% more' : 'produces ' + Math.abs(off) + '% less'} than observed`;
           tip.style.left = (e.clientX - b.left) + 'px';
           tip.style.top = (e.clientY - b.top) + 'px';
@@ -741,7 +1177,7 @@ function ratioChart(mount, familyKey) {
       b.type = 'button';
       if (hidden.has(i)) b.classList.add('is-off');
       b.append(Object.assign(el('i'), { style: `background:${colour(row)}` }),
-               document.createTextNode(row.model + (row.ref ? ' (reference)' : '')));
+               el('span', null, modelLabel(row.model)));
       b.onclick = () => {
         hidden.has(i) ? hidden.delete(i) : hidden.add(i);
         if (hidden.size === rows.length) hidden.delete(i);
@@ -762,12 +1198,8 @@ function ratioChart(mount, familyKey) {
 
 // Colours stay consistent with the bar charts: the IFS reference is grey and
 // each model keeps the colour it has in the summary table order.
-function familyColours(family) {
-  const rows = window.METRICS.summary[family].rows;
-  const map = {};
-  let i = 0;
-  rows.forEach(r => { map[r.model] = r.ref ? 'var(--ink-3)' : CHART_COLOURS[i++ % CHART_COLOURS.length]; });
-  return map;
+function familyColours(family, explicit) {
+  return explicit || new Proxy({}, { get: (_, m) => colourOf(m) });
 }
 
 const LEAD_METRICS = [
@@ -778,7 +1210,7 @@ const LEAD_METRICS = [
   { key: 'mae',   label: 'MAE' },
   { key: 'crps',  label: 'CRPS' },
   { key: 'fbias', label: 'Frequency bias' },
-  { key: 'ratio', label: 'Rainfall total ratio' }
+  { key: 'ratio', label: 'Rain ratio' }
 ];
 
 const THRESHOLD_METRICS = [
@@ -805,7 +1237,8 @@ function picker(label, options, value, onChange) {
 /* One line per model across an ordered x axis: forecast lead hour, or
    rainfall threshold. */
 function seriesChart(mount, cfg) {
-  const colours = familyColours(cfg.family);
+  const colours = familyColours(cfg.family, cfg.colours);
+  const formatV = cfg.formatV || (v => v.toFixed(4));
   const hidden = mount._hidden || (mount._hidden = new Set());
   const state = mount._state || (mount._state = { metric: cfg.metrics[0].key, interval: cfg.intervals[0] });
 
@@ -822,8 +1255,10 @@ function seriesChart(mount, cfg) {
     }
     mount.append(bar);
 
-    const rows = cfg.rows.filter(r => r.interval === state.interval);
-    const models = [...new Set(rows.map(r => r.model))];
+    const rows = cfg.rows.filter(r => r.interval === state.interval && (!cfg.models || cfg.models.includes(r.model)));
+    // Legend order follows the summary table (cfg.models) when given.
+    const present = new Set(rows.map(r => r.model));
+    const models = cfg.models ? cfg.models.filter(m => present.has(m)) : [...present];
     const shown = models.filter(m => !hidden.has(m));
     const xs = [...new Set(rows.map(r => r[cfg.xKey]))].sort((a, b) => a - b);
 
@@ -864,8 +1299,8 @@ function seriesChart(mount, cfg) {
                                       fill: colours[model] || 'var(--ink-3)', class: 'chart-dot' });
         dot.addEventListener('mousemove', e => {
           const b = mount.getBoundingClientRect();
-          tip.innerHTML = `<b>${model}</b><br>${cfg.xLabelShort}: ${cfg.formatX(p.xv)}`
-            + `<br>${cfg.metrics.find(m => m.key === state.metric).label}: ${p.v.toFixed(4)}`;
+          tip.innerHTML = `<b>${modelLabel(model)}</b><br>${cfg.xLabelShort}: ${cfg.formatX(p.xv)}`
+            + `<br>${cfg.metrics.find(m => m.key === state.metric).label}: ${formatV(p.v, state.metric)}`;
           tip.style.left = (e.clientX - b.left) + 'px';
           tip.style.top = (e.clientY - b.top) + 'px';
           tip.classList.add('on');
@@ -894,7 +1329,7 @@ function seriesChart(mount, cfg) {
       b.type = 'button';
       if (hidden.has(model)) b.classList.add('is-off');
       b.append(Object.assign(el('i'), { style: `background:${colours[model] || 'var(--ink-3)'}` }),
-               document.createTextNode(model));
+               el('span', null, modelLabel(model)));
       b.onclick = () => {
         hidden.has(model) ? hidden.delete(model) : hidden.add(model);
         if (hidden.size === models.length) hidden.delete(model);
@@ -908,28 +1343,98 @@ function seriesChart(mount, cfg) {
   draw();
 }
 
-function leadChart(mount, family) {
-  const rows = (window.LEADTIME || []).filter(r => r.family === family);
+// Second training runs (shown only in the supplement) and the comparison rows.
+const SECOND_SEEDS = ['SpateGAN-IFS (seed 43)', 'CEDDAR-IFS (seed 505)'];
+const COMPARISONS = ['SpateGAN-ERA5'];
+// The previous selection is not shown anywhere on the page.
+const DROPPED = ['Previous selection'];
+const modelsFor = key => (window.METRICS.summary[key] ? window.METRICS.summary[key].rows.map(r => r.model) : []);
+
+// Rows carry the summary key as their family (spategan, spategan-test, ...).
+const familyOf = (rows, key) => { key = key.replace(/-seeds$/, ''); return rows.some(r => r.family === key) ? key : key.split('-')[0]; };
+
+function leadChart(mount, key) {
+  const models = modelsFor(key), family = familyOf(window.LEADTIME || [], key);
+  const rows = (window.LEADTIME || []).filter(r => r.family === family && models.includes(r.model));
   if (!rows.length) return;
   const intervals = [...new Set(rows.map(r => r.interval))].sort().reverse(); // 3h first
   seriesChart(mount, {
-    family, rows, intervals, metrics: LEAD_METRICS,
+    family, rows, intervals, metrics: LEAD_METRICS, models,
     xKey: 'lead', ordinal: false,
     xLabel: 'Forecast lead time (hours after the forecast was issued)',
     xLabelShort: 'Lead', formatX: v => v + ' h'
   });
 }
 
-function thresholdChart(mount, family) {
-  const rows = (window.BYTHRESHOLD || []).filter(r => r.family === family);
+function thresholdChart(mount, key) {
+  const models = modelsFor(key), family = familyOf(window.BYTHRESHOLD || [], key);
+  const rows = (window.BYTHRESHOLD || []).filter(r => r.family === family && models.includes(r.model));
   if (!rows.length) return;
   const intervals = [...new Set(rows.map(r => r.interval))].sort().reverse();
   seriesChart(mount, {
-    family, rows, intervals, metrics: THRESHOLD_METRICS,
+    family, rows, intervals, metrics: THRESHOLD_METRICS, models,
     xKey: 'threshold_mmh', ordinal: true,
     xLabel: 'Rainfall threshold (mm per hour)',
     xLabelShort: 'Threshold', formatX: v => v + ' mm/h'
   });
+}
+
+/* Ensemble FSS by threshold and neighbourhood size. "Difference from IFS"
+   subtracts the matched IFS grid from the same suite, so blue cells are where
+   the model's spatial agreement beats IFS. */
+function fssGridTable(mount, family) {
+  const M = window.METRICS;
+  const grids = M.fssGrid[family];
+  const models = Object.keys(grids);
+  const state = mount._state || (mount._state = {
+    model: models.includes(FINAL_MODEL) ? FINAL_MODEL : (models.find(m => m !== 'IFS') || models[0]), mode: 'diff' });
+
+  const draw = () => {
+    mount.innerHTML = '';
+    const bar = el('div', 'chart-controls');
+    bar.append(picker('Model', models.map(m => ({ value: m, label: plainLabel(m) })), state.model,
+                      v => { state.model = v; draw(); }));
+    if (state.model !== 'IFS') {
+      bar.append(picker('Show', [{ value: 'diff', label: 'Difference from IFS' }, { value: 'value', label: 'FSS value' }],
+                        state.mode, v => { state.mode = v; draw(); }));
+    }
+    mount.append(bar);
+
+    const diff = state.mode === 'diff' && state.model !== 'IFS';
+    const g = grids[state.model], ref = grids.IFS;
+    const t = el('table', 'fss-grid');
+    mount.dataset.key = diff ? 'Blue cells: better than IFS; orange cells: worse.' : 'Darker cells: higher FSS.';
+    const cap = mount._caption;
+    const key = cap && cap.querySelector('.cap-key');
+    if (key) key.textContent = ' ' + mount.dataset.key;
+    const hr = el('tr');
+    hr.append(el('th', null, 'Threshold'));
+    M.fssScales.forEach(s => hr.append(el('th', 'num', s + ' km')));
+    const thead = el('thead');
+    thead.append(hr);
+    const tb = el('tbody');
+    M.thresholds.forEach((th, i) => {
+      const tr = el('tr');
+      tr.append(el('td', null, th.hourly + ' mm/h'));
+      g[i].forEach((v, j) => {
+        const d = v - ref[i][j];
+        const shown = diff ? (d >= 0 ? '+' : '−') + Math.abs(d).toFixed(3) : v.toFixed(3);
+        const td = el('td', 'num', shown);
+        // Square-root shading keeps small differences visible next to large ones.
+        const pct = diff ? Math.sqrt(Math.min(Math.abs(d) / 0.3, 1)) * 40 : v * 40;   // capped so cell text keeps 4.5:1 in both themes
+        const hue = diff && d < 0 ? 'var(--warn)' : 'var(--accent)';
+        td.style.background = `color-mix(in srgb, ${hue} ${pct.toFixed(0)}%, var(--card))`;
+        td.title = `${plainLabel(state.model)}: ${v.toFixed(4)} · IFS: ${ref[i][j].toFixed(4)}`;
+        tr.append(td);
+      });
+      tb.append(tr);
+    });
+    t.append(thead, tb);
+    const wrap = el('div', 'tw');
+    wrap.append(t);
+    mount.append(cap ? exhibit(cap, wrap) : wrap);
+  };
+  draw();
 }
 
 // Repeat the project identity in navigation only after the title leaves view.
@@ -943,9 +1448,28 @@ new IntersectionObserver(([entry]) => {
 }, { threshold: 0 }).observe(reportHeader);
 
 const testsMenu = document.querySelector('.nav-tests');
-testsMenu.querySelectorAll('a').forEach(link => link.addEventListener('click', () => { testsMenu.open = false; }));
-document.addEventListener('click', event => { if (!testsMenu.contains(event.target)) testsMenu.open = false; });
-document.addEventListener('keydown', event => { if (event.key === 'Escape' && testsMenu.open) { testsMenu.open = false; testsMenu.querySelector('summary').focus(); } });
+// Supplementary sections and the references are collapsed; following a link into one opens it first.
+const openBox = target => {
+  const box = target && (target.matches('details') ? target : target.closest('details.supp, details.refs'));
+  if (box) box.open = true;
+  return box;
+};
+const openTarget = () => {
+  const target = location.hash && document.querySelector(location.hash);
+  if (openBox(target)) target.scrollIntoView();
+};
+addEventListener('hashchange', openTarget);
+document.addEventListener('DOMContentLoaded', openTarget);
+// A link to the hash already in the address bar fires no hashchange, so open its box on click as well.
+document.addEventListener('click', event => {
+  const link = event.target.closest('a[href^="#"]');
+  if (link && link.getAttribute('href').length > 1) openBox(document.querySelector(link.getAttribute('href')));
+});
+if (testsMenu) {
+  testsMenu.querySelectorAll('a').forEach(link => link.addEventListener('click', () => { testsMenu.open = false; }));
+  document.addEventListener('click', event => { if (!testsMenu.contains(event.target)) testsMenu.open = false; });
+  document.addEventListener('keydown', event => { if (event.key === 'Escape' && testsMenu.open) { testsMenu.open = false; testsMenu.querySelector('summary').focus(); } });
+}
 
 // Render navigation help outside the bar so labels do not resize or clip controls.
 (() => {

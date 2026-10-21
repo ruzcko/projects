@@ -6,6 +6,6 @@ Each project is a folder of static files, served at `ruzcko.com/projects/<folder
 
 Projects are built in their own working folders and copied here when finished. Commit finished versions only: every commit of changed images stays in the history.
 
-- `precipitation-downscaling`: built from `~/Projects/Presentations/G-26IND-A/page` with `python3 publish.py`.
+- `precipitation-downscaling`: built from the report's working folder with its publish script.
 
 © Rogelio Ruzcko Tobias. All rights reserved. Logos and third-party material belong to their owners.
