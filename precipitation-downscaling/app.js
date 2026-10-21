@@ -3,9 +3,80 @@
    current tick to their own frame index, so a three-hour layer holds each frame
    for six ticks and stays aligned with the half-hour layers rather than drifting. */
 
+// Page language: index.ko.html sets <html lang="ko">. t() returns the Korean text of an English
+// string (the English text is the key) and fills its {0}, {1}, ... placeholders.
+const LANG = (document.documentElement.lang || 'en').toLowerCase().startsWith('ko') ? 'ko' : 'en';
+const KO = {
+  // exhibits, units and status
+  'Fig. {0}.': '그림 {0}.', 'Table {0}.': '표 {0}.',
+  'MAE and CRPS in mm per three hours.': 'MAE와 CRPS의 단위는 3시간당 mm이다.',
+  'not yet available': '아직 없음',
+  'loading {0} frames': '프레임 {0}개 불러오는 중',
+  '{0} of {1} frames failed to load': '프레임 {1}개 중 {0}개를 불러오지 못했다',
+  // regions and case viewer
+  'South Korea': '한국', 'Indonesia': '인도네시아', 'Philippines': '필리핀', 'Ghana': '가나', 'Tonga': '통가',
+  '{0} cases': '{0} 사례',
+  '{0}, {1}–24:00 UTC': '{0} {1}–24:00 UTC', '{0}, {1} – {2}, {3} UTC': '{0} {1} – {2} {3} UTC',
+  'Play': '재생', 'Pause': '일시정지',
+  'AWS stations': 'AWS 관측소', 'Estate gauges': '농장 우량계', '{0}, 48 km zoom': '{0}, 48 km 확대',
+  'no observation': '관측 없음',
+  'Divider between IFS and {0}, {1}': 'IFS와 {0} 사이 구분선, {1}',
+  // display names of models, layers and stations
+  'SpateGAN-IFS, second run': 'SpateGAN-IFS, 두 번째 학습 실행', 'CEDDAR, second run': 'CEDDAR, 두 번째 학습 실행',
+  'Published SpateGAN': '공개 SpateGAN', 'Radar': '레이더', 'PAGASA radar': 'PAGASA 레이더',
+  'AWS station': 'AWS 관측소', 'Gauge': '우량계',
+  'Without GFS pretraining': 'GFS 사전학습 없음', 'With GFS pretraining': 'GFS 사전학습 있음', '{0}, run {1}': '{0}, 실행 {1}',
+  // station chart
+  'Station': '관측소', '{0} {1} · {2} in 24 h': '{0} {1} · 24 h 누적 {2}',
+  '24-hour total at this station: ': '이 관측소의 24시간 누적: ',
+  'Time (UTC)': '시간 (UTC)', 'Rain so far (mm)': '누적 강수량 (mm)',
+  // tables: headers
+  'Model': '모델', 'Ensemble FSS': '앙상블 FSS', 'Ensemble FSS ↑': '앙상블 FSS ↑',
+  'One training sample': '학습 샘플 1개', 'IFS training samples': 'IFS 학습 샘플',
+  'Validation samples': '검증 샘플', 'Reserved test samples': '독립 시험 샘플',
+  'Validation block': '검증 구간', 'Start': '시작', 'End': '종료',
+  'Training per stage': '단계별 학습량', 'Batch size': '배치 크기', 'Time per stage': '단계별 소요 시간',
+  'GPU-hours, all runs': 'GPU 시간, 전체 실행',
+  'Parameters (M)': '파라미터 (M)', 'GFLOPs per<br>sample (est.)': '샘플당<br>GFLOPs (추정)',
+  'Inference per<br>sample (s)': '샘플당<br>추론 시간 (s)', 'Peak GPU<br>memory (GiB)': '최대 GPU<br>메모리 (GiB)',
+  'Inference per<br>case (s)': '사례당<br>추론 시간 (s)',
+  'Threshold (mm/hour)': '임계값 (mm/h)', 'As a three-hour amount (mm)': '3시간 누적량 (mm)',
+  'Ensemble spread (mm/3 h)': '앙상블 퍼짐 (mm/3 h)', '10–90% interval coverage': '10–90% 구간 포함률',
+  'Group': '그룹', 'Stage 1 (GFS)': '1단계 (GFS)', 'Stage 2 (IFS)': '2단계 (IFS)',
+  'Split': '분할', 'Dates': '기간', 'SpateGAN samples': 'SpateGAN 샘플', 'CEDDAR samples': 'CEDDAR 샘플',
+  'Run': '실행', 'FSS without GFS': 'FSS (GFS 없음)', 'FSS with GFS': 'FSS (GFS 있음)',
+  'Δ|volume bias|': 'Δ|총량 편향|', 'Step': '스텝', '{0} (pick)': '{0} (선택)',
+  // tables: cells (data-metrics.js)
+  'None (IFS training pool only)': '없음 (IFS 학습 풀만)', 'IFS training pool': 'IFS 학습 풀',
+  'All eligible GFS, 2021–2023': '사용 가능한 GFS 전체, 2021–2023', 'Same IFS training pool': '같은 IFS 학습 풀',
+  'GFS pretraining': 'GFS 사전학습', 'IFS training': 'IFS 학습', 'Validation': '검증', 'Reserved test': '독립 시험',
+  'Feb 2024 – Sep 2025': '2024년 2월 – 2025년 9월', 'Four 8-day blocks, 2025': '2025년, 8일 구간 4개',
+  'Cycles 28 Sep – 31 Dec 2025': '2025년 9월 28일 – 12월 31일 예보 사이클',
+  '1,000 steps': '1,000 스텝', '60 epochs': '60 에포크', '1 x V100 or A100': '1 x V100 또는 A100',
+  'about 1.3–2.7 h': '약 1.3–2.7 h', 'about 1.4–3.3 h': '약 1.4–3.3 h',
+  'A 48-hour input sequence paired with a central 24-hour rainfall sequence': '48시간 입력 시퀀스와 중앙 24시간 강수 시퀀스의 쌍',
+  'One paired three-hour rainfall field': '짝지은 3시간 강수장 1개',
+  'Winter': '겨울', 'Spring': '봄', 'Summer': '여름', 'Autumn': '가을',
+  // charts
+  'Ens. FSS': '앙상블 FSS', 'Rain ratio': '강수량 비율', 'Frequency bias': '빈도 편향',
+  '{0} better than IFS': 'IFS 대비 {0} 향상', '{0} worse than IFS': 'IFS 대비 {0} 저하',
+  '1.0 = same as observed': '1.0 = 관측과 같음', 'model ÷ observed': '모델 ÷ 관측',
+  'produces {0}% more than observed': '관측보다 {0}% 많이 생성', 'produces {0}% less than observed': '관측보다 {0}% 적게 생성',
+  'Metric': '지표', 'Interval': '간격', '30 minutes': '30분', '3 hours': '3시간',
+  'Forecast lead time (hours after the forecast was issued)': '예보 선행 시간 (예보 발표 후 경과 시간)', 'Lead': '선행 시간',
+  'Rainfall threshold (mm per hour)': '강수 임계값 (mm/h)', 'Threshold': '임계값',
+  'Show': '표시', 'Difference from IFS': 'IFS와의 차이', 'FSS value': 'FSS 값',
+  'Blue cells: better than IFS; orange cells: worse.': '파란 칸은 IFS보다 좋고, 주황 칸은 나쁘다.',
+  'Darker cells: higher FSS.': '진한 칸일수록 FSS가 높다.'
+};
+const t = (s, ...args) => {
+  const text = LANG === 'ko' && Object.hasOwn(KO, s) ? KO[s] : s;
+  return args.length ? text.replace(/\{(\d)\}/g, (_, i) => args[i]) : text;
+};
+
 const TICKS = 48;            // 24 h at 30 min
 const TICK_MIN = 30;
-const PENDING = '<span class="pending" title="not yet available">&ndash;</span>';
+const PENDING = `<span class="pending" title="${t('not yet available')}">&ndash;</span>`;
 
 const el = (tag, cls, html) => {
   const n = document.createElement(tag);
@@ -26,15 +97,15 @@ const DISPLAY_NAMES = {
   'PEAK_HSP (target)': 'Radar', 'PEAK_HSP': 'Radar',
   'PAGASA radar (provisional)': 'PAGASA radar'
 };
-const displayName = s => DISPLAY_NAMES[s] || String(s);
+const displayName = s => t(DISPLAY_NAMES[s] || String(s));
 // Model labels carry their training variant after "_" (SpateGAN-IFS_GFS-100); render it
 // as a subscript, keeping the selected-model star outside. Plain text (dropdowns) uses "-".
 const modelLabel = s => datasetLabel(displayName(s)).replace(/_([^\s*<]+)(\*?)/g, '<sub>$1</sub>$2');
 const plainLabel = s => displayName(s).replace(/_/g, '-');
 // GFS runs: seed 42 / 504 is run 1, seed 43 / 505 is run 2.
 const runNumber = seed => (/^(42|504)$/.test(String(seed)) ? 1 : /^(43|505)$/.test(String(seed)) ? 2 : seed);
-const gfsGroup = g => g === 'GFS-0' ? 'Without GFS pretraining' : g === 'GFS-100' ? 'With GFS pretraining' : g;
-const gfsRun = s => String(s).replace(/^(GFS-0|GFS-100), seed (\d+)$/, (_, g, seed) => `${gfsGroup(g)}, run ${runNumber(seed)}`);
+const gfsGroup = g => g === 'GFS-0' ? t('Without GFS pretraining') : g === 'GFS-100' ? t('With GFS pretraining') : g;
+const gfsRun = s => String(s).replace(/^(GFS-0|GFS-100), seed (\d+)$/, (_, g, seed) => t('{0}, run {1}', gfsGroup(g), runNumber(seed)));
 // Case-layer and case display names come from build-cases.py (LAYERS and the case label file).
 // The final operational model; CEDDAR-IFS is supplementary and off by default.
 const FINAL_MODEL = 'SpateGAN-IFS';
@@ -46,25 +117,30 @@ const pad = n => String(n).padStart(2, '0');
 function addMinutes(iso, mins) {
   return new Date(Date.parse(iso) + mins * 60000);
 }
+// Korean dates read "2025년 7월 16일"; times stay in UTC.
+const koDay = d => `${d.getUTCFullYear()}년 ${d.getUTCMonth() + 1}월 ${d.getUTCDate()}일`;
+const dateLabel = d => LANG === 'ko' ? koDay(d) : `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
+const hourLabel = d => `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
 function clockLabel(d) {
-  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} `
-       + `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())} UTC`;
+  return `${dateLabel(d)} ${hourLabel(d)} UTC`;
 }
+// A case's short name and title; the Korean page uses label_ko and title_ko from data-cases.js.
+const caseLabel = c => (LANG === 'ko' && c.label_ko) || c.label || c.id;
+const caseTitle = c => (LANG === 'ko' && c.title_ko) || c.title || caseLabel(c);
 // A case's date, shown apart from its short name: the start of its UTC window.
 const caseStart = c => new Date(Date.parse((c.window && c.window[0]) || c.start));
-const caseDate = c => clockLabel(caseStart(c)).slice(0, 10);
+const caseDate = c => dateLabel(caseStart(c));
 // A case's UTC window for the viewer meta line: "16 Jul 2025, 00:00–24:00 UTC", or with both
 // dates when the window starts mid-day: "10 May 2025, 12:00 – 11 May 2025, 12:00 UTC".
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const dayLabel = d => `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
-const hourLabel = d => `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
+const dayLabel = d => LANG === 'ko' ? koDay(d) : `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
 function caseRange(c) {
   const a = caseStart(c);
   const b = c.window && c.window[1] ? new Date(Date.parse(c.window[1])) : addMinutes(a.toISOString(), 24 * 60);
   if (hourLabel(b) === '00:00' && b - a <= 864e5 && dayLabel(addMinutes(b.toISOString(), -1)) === dayLabel(a)) {
-    return `${dayLabel(a)}, ${hourLabel(a)}–24:00 UTC`;
+    return t('{0}, {1}–24:00 UTC', dayLabel(a), hourLabel(a));
   }
-  return `${dayLabel(a)}, ${hourLabel(a)} – ${dayLabel(b)}, ${hourLabel(b)} UTC`;
+  return t('{0}, {1} – {2}, {3} UTC', dayLabel(a), hourLabel(a), dayLabel(b), hourLabel(b));
 }
 
 /* ------------------------------------------------------------------ viewer */
@@ -122,10 +198,10 @@ class CaseViewer {
     const bar = el('div', 'viewer-bar');
 
     const caseTabs = el('div', 'tabs');
-    caseTabs.setAttribute('aria-label', `${REGION_NAMES[this.region] || this.region} cases`);
+    caseTabs.setAttribute('aria-label', t('{0} cases', t(REGION_NAMES[this.region] || this.region)));
     this.cases.forEach((c, i) => {
-      const b = el('button', null, c.label || c.id);
-      b.title = `${c.title || c.label || c.id}, ${caseDate(c)}`;
+      const b = el('button', null, caseLabel(c));
+      b.title = `${caseTitle(c)}, ${caseDate(c)}`;
       b.setAttribute('aria-selected', i === 0);
       b.onclick = () => this.selectCase(i);
       caseTabs.append(b);
@@ -141,8 +217,8 @@ class CaseViewer {
 
     const controls = el('div', 'controls');
     this.playBtn = el('button', 'btn btn-play', '&#9654;');
-    this.playBtn.setAttribute('aria-label', 'Play');
-    this.playBtn.title = 'Play';
+    this.playBtn.setAttribute('aria-label', t('Play'));
+    this.playBtn.title = t('Play');
     this.playBtn.onclick = () => this.toggle();
     const back = el('button', 'btn', '&#8592;');
     back.onclick = () => { this.pause(); this.seek(this.tick - 1); };
@@ -249,16 +325,16 @@ class CaseViewer {
     const items = shown.map(({ def }) => ({ def, title: modelLabel(def.label), opts: { box: view } }));
     if (mode === 'panel') {
       const base = shown[0] && shown[0].def.base;
-      items.push({ def: { role: 'observed', cadence: st.interval_seconds / 60, base, order: 0 }, title: 'AWS stations', opts: { dots: true } });
+      items.push({ def: { role: 'observed', cadence: st.interval_seconds / 60, base, order: 0 }, title: t('AWS stations'), opts: { dots: true } });
     }
     items.sort((p, q) => byRole(p.def, q.def));
     this.panels = items.map(i => makePanel(i.def, i.title, i.opts));
     if (mode === 'zoom') {
       shown.filter(({ key }) => /^ifs-|-final$/.test(key)).forEach(({ def }) =>
-        this.panels.push(makePanel(def, `${plainLabel(modelLabel(def.label))}, 48 km zoom`, { view, dots: true })));
+        this.panels.push(makePanel(def, t('{0}, 48 km zoom', plainLabel(modelLabel(def.label))), { view, dots: true })));
       const base = shown[0] && shown[0].def.base;
       this.panels.push(makePanel({ role: 'observed', cadence: st.interval_seconds / 60, base, native: true },
-        'Estate gauges, 48 km zoom', { view, dots: true }));
+        t('{0}, 48 km zoom', t('Estate gauges')), { view, dots: true }));
     }
 
     // Toggle any layer while keeping at least one visible.
@@ -277,7 +353,7 @@ class CaseViewer {
     });
     // The station panels toggle like a layer; they are never the only thing shown.
     if (st) {
-      const button = el('button', stOn ? '' : 'is-off', st.source === 'kr_aws' ? 'AWS stations' : 'Estate gauges');
+      const button = el('button', stOn ? '' : 'is-off', t(st.source === 'kr_aws' ? 'AWS stations' : 'Estate gauges'));
       button.type = 'button';
       button.setAttribute('aria-pressed', String(stOn));
       button.onclick = () => { this.stationsOn = !stOn; this.rebuildPanels(); };
@@ -285,7 +361,7 @@ class CaseViewer {
     }
 
     this.meta.innerHTML = '';
-    this.meta.append(el('b', null, c.title || c.label || c.id), document.createTextNode(` · ${caseRange(c)}`));
+    this.meta.append(el('b', null, caseTitle(c)), document.createTextNode(` · ${caseRange(c)}`));
     this.stationChart();
     if (this.near) this.preload();
     else this.loadEl.innerHTML = '';
@@ -320,7 +396,7 @@ class CaseViewer {
     const fill = el('i');
     bar.append(fill);
     this.loadEl.innerHTML = '';
-    this.loadEl.append(bar, document.createTextNode(`loading ${urls.length} frames`));
+    this.loadEl.append(bar, document.createTextNode(t('loading {0} frames', urls.length)));
     const token = this.token;
     urls.forEach(u => {
       const img = new Image();
@@ -330,7 +406,7 @@ class CaseViewer {
         if (!ok) failed++;
         fill.style.width = (done / urls.length * 100) + '%';
         if (done === urls.length) this.loadEl.textContent = failed
-          ? `${failed} of ${urls.length} frames failed to load`
+          ? t('{0} of {1} frames failed to load', failed, urls.length)
           : '';
       };
       img.onload = () => tally(true);
@@ -370,8 +446,8 @@ class CaseViewer {
   }
 
   toggle() { this.playing ? this.pause() : this.play(); }
-  play() { this.playing = true; this.last = performance.now(); this.playBtn.textContent = 'Ⅱ'; this.playBtn.setAttribute('aria-label', 'Pause'); this.playBtn.title = 'Pause'; }
-  pause() { this.playing = false; this.playBtn.textContent = '▶'; this.playBtn.setAttribute('aria-label', 'Play'); this.playBtn.title = 'Play'; }
+  play() { this.playing = true; this.last = performance.now(); this.playBtn.textContent = 'Ⅱ'; this.playBtn.setAttribute('aria-label', t('Pause')); this.playBtn.title = t('Pause'); }
+  pause() { this.playing = false; this.playBtn.textContent = '▶'; this.playBtn.setAttribute('aria-label', t('Play')); this.playBtn.title = t('Play'); }
 
   loop(now) {
     if (this.playing) {
@@ -446,7 +522,7 @@ function stationLayer(s, domain, view) {
         const colour = v == null ? null : paletteColour(v * 3600 / seconds);
         d.c.setAttribute('class', v == null ? 'is-missing' : (colour === 'transparent' ? 'is-dry' : ''));
         d.c.style.fill = colour && colour !== 'transparent' ? colour : '';
-        d.title.textContent = `${d.st.id}: ${v == null ? 'no observation' : v.toFixed(1) + ' mm'}`;
+        d.title.textContent = `${d.st.id}: ${v == null ? t('no observation') : v.toFixed(1) + ' mm'}`;
       }
     }
   };
@@ -473,9 +549,9 @@ function cumulativeChart(mount, s, names, domain) {
   const draw = () => {
     mount.innerHTML = '';
     const bar = el('div', 'chart-controls');
-    bar.append(picker('Station', s.series_stations.map(id => {
+    bar.append(picker(t('Station'), s.series_stations.map(id => {
       const st = s.stations.find(x => x.id === id);
-      return { value: id, label: `${s.source === 'kr_aws' ? 'AWS' : 'Gauge'} ${id} · ${mm(st.total)} in 24 h` };
+      return { value: id, label: t('{0} {1} · {2} in 24 h', s.source === 'kr_aws' ? 'AWS' : t('Gauge'), id, mm(st.total)) };
     }), state.station, v => { state.station = v; draw(); }));
     mount.append(bar);
     const st = s.stations.find(x => x.id === state.station);
@@ -497,7 +573,7 @@ function cumulativeChart(mount, s, names, domain) {
       const last = sr.points.filter(p => p.v != null).pop();
       return `${modelLabel(sr.name)} ${last ? mm(last.v) : '–'}`;
     });
-    mount.append(el('p', 'chart-totals', '24-hour total at this station: ' + totals.join(' · ')));
+    mount.append(el('p', 'chart-totals', t('24-hour total at this station: ') + totals.join(' · ')));
     // Size from the container (capped like the other charts); a hidden container falls back to 760.
     const W = Math.max(280, Math.min(760, mount.clientWidth || 760)), H = W < 500 ? 280 : 250, L = 52, R = 16, T = 14, B = 46;
     const t0 = s.times[0] - s.interval_seconds, t1 = s.times[s.times.length - 1];
@@ -513,10 +589,10 @@ function cumulativeChart(mount, s, names, domain) {
       lab.textContent = new Date(t * 1000).toISOString().slice(11, 16); svg.append(lab);
     }
     const ax = svgEl('text', { x: L + (W - L - R) / 2, y: H - 8, 'text-anchor': 'middle', class: 'chart-axis' });
-    ax.textContent = 'Time (UTC)'; svg.append(ax);
+    ax.textContent = t('Time (UTC)'); svg.append(ax);
     const ay = svgEl('text', { x: 0, y: 0, 'text-anchor': 'middle', class: 'chart-axis',
                                transform: `translate(14 ${T + (H - T - B) / 2}) rotate(-90)` });
-    ay.textContent = 'Rain so far (mm)'; svg.append(ay);
+    ay.textContent = t('Rain so far (mm)'); svg.append(ay);
     for (const sr of series) {
       const pts = sr.points.filter(p => p.v != null);
       if (!pts.length || state.hidden.has(sr.key)) continue;
@@ -568,11 +644,11 @@ function summaryTable(key) {
   const dir = d => '&nbsp;<span class="dir">' + (d === 'up' ? '&uarr;' : '&darr;') + '</span>';
   const cols = [['mae', 'MAE' + dir('dn')], ['pod', 'POD-M' + dir('up')],
                 ['far', 'FAR-M' + dir('dn')], ['csi', 'CSI-M' + dir('up')],
-                ['fss', 'Ensemble FSS' + dir('up')], ['crps', 'CRPS' + dir('dn')]];
-  const t = el('table');
+                ['fss', t('Ensemble FSS') + dir('up')], ['crps', 'CRPS' + dir('dn')]];
+  const table = el('table');
   const thead = el('thead');
   const hr = el('tr');
-  hr.append(el('th', null, 'Model'));
+  hr.append(el('th', null, t('Model')));
   cols.forEach(([, label]) => hr.append(el('th', 'num', label)));
   thead.append(hr);
   const tb = el('tbody');
@@ -582,27 +658,27 @@ function summaryTable(key) {
     cols.forEach(([k]) => tr.append(el('td', 'num', fmt4(r[k]))));
     tb.append(tr);
   });
-  t.append(thead, tb);
+  table.append(thead, tb);
   const wrap = el('div', 'tw');
-  wrap.append(t);
+  wrap.append(table);
   return wrap;
 }
 
 function simpleTable(rows, cols) {
-  const t = el('table');
+  const table = el('table');
   const thead = el('thead'), hr = el('tr');
-  cols.forEach(c => hr.append(el('th', c.num ? 'num' : '', c.label)));
+  cols.forEach(c => hr.append(el('th', c.num ? 'num' : '', t(c.label))));
   thead.append(hr);
   const tb = el('tbody');
   rows.forEach(r => {
     const tr = el('tr');
     cols.forEach(c => tr.append(el('td', c.num ? 'num' : '',
-      r[c.key] == null ? PENDING : noBreakParens(c.key === 'model' ? modelLabel(r[c.key]) : String(r[c.key])))));
+      r[c.key] == null ? PENDING : noBreakParens(c.key === 'model' ? modelLabel(r[c.key]) : t(String(r[c.key]))))));
     tb.append(tr);
   });
-  t.append(thead, tb);
+  table.append(thead, tb);
   const wrap = el('div', 'tw');
-  wrap.append(t);
+  wrap.append(table);
   return wrap;
 }
 
@@ -639,7 +715,7 @@ function numberExhibits() {
   const count = { fig: [0, 0], tab: [0, 0] };
   document.querySelectorAll('figure > figcaption').forEach(cap => {
     const s = supp(cap) ? 1 : 0, n = ++count.fig[s];
-    cap.innerHTML = '<b>Fig. ' + (s ? 'S' + n : n) + '.</b> ' + cap.innerHTML;
+    cap.innerHTML = '<b>' + t('Fig. {0}.', s ? 'S' + n : n) + '</b> ' + cap.innerHTML;
   });
   document.querySelectorAll('table').forEach(tbl => {
     const host = tbl.closest('.tw') || tbl;
@@ -647,7 +723,7 @@ function numberExhibits() {
     const caption = src ? ' ' + src.dataset.caption : '';
     const s = supp(tbl) ? 1 : 0, n = ++count.tab[s];
     const label = el('div', 'table-label',
-      '<b>Table ' + (s ? 'S' + n : n) + '.</b>' + modelLabel(caption));
+      '<b>' + t('Table {0}.', s ? 'S' + n : n) + '</b>' + modelLabel(caption));
     // A redrawn table (the FSS grid) keeps its label; data-key adds a short colour key to it.
     if (src && src.dataset.key) label.append(el('span', 'cap-key', ' ' + src.dataset.key));
     if (src) src._caption = label;
@@ -694,7 +770,7 @@ function compareSlider(node) {
   const frame = el('div', 'compare-frame');
   const range = el('input', 'compare-range');
   Object.assign(range, { type: 'range', min: 0, max: 100, value: 50 });
-  range.setAttribute('aria-label', `Divider between IFS and ${hiName}, ${node.dataset.name}`);
+  range.setAttribute('aria-label', t('Divider between IFS and {0}, {1}', hiName, node.dataset.name));
   const tagLo = el('span', 'compare-tag is-left', '24 km');
   const tagHi = el('span', 'compare-tag is-right', '2 km');
   frame.append(side(hiKey, 'is-hi'), side(loKey, 'is-lo'), el('div', 'compare-handle'),
@@ -789,7 +865,7 @@ function chrome() {
     for (const s of sections) if (s.getBoundingClientRect().top <= 140) active = s;
     links.forEach(a => a && a.classList.remove('is-active'));
     links.get(active.id)?.classList.add('is-active');
-    testsSummary?.classList.toggle('is-active', active.id === 'supplementary');
+    testsSummary?.classList.toggle('is-active', !!active.closest('#supplementary'));
   };
   addEventListener('scroll', sync, { passive: true });
   sync();
@@ -861,10 +937,10 @@ document.addEventListener('DOMContentLoaded', () => {
     new CaseViewer(node, { region, domain, cases: list('cases'), layers: list('layers') });
   });
 
-  const UNITS = 'MAE and CRPS in mm per three hours.';
+  const UNITS = t('MAE and CRPS in mm per three hours.');
   document.querySelectorAll('[data-summary]').forEach(n => {
     const cap = (n.dataset.caption || '').trim();
-    if (!/mm per three hours/.test(cap)) n.dataset.caption = (cap ? cap + ' ' : '') + UNITS;
+    if (!/mm per three hours/.test(cap) && !cap.includes(UNITS)) n.dataset.caption = (cap ? cap + ' ' : '') + UNITS;
     n.append(summaryTable(n.dataset.summary));
   });
 
@@ -911,7 +987,7 @@ document.addEventListener('DOMContentLoaded', () => {
     { key: 'dfss', label: 'ΔFSS', num: true }, { key: 'ci', label: '95% CI', num: true },
     { key: 'dcrps', label: 'ΔCRPS', num: true }, { key: 'dcsi', label: 'ΔCSI', num: true },
     { key: 'dbias', label: 'Δ|volume bias|', num: true }]);
-  tableAt('candidates', M.candidates.map(r => Object.assign({}, r, { run: gfsRun(r.run), step: r.pick ? r.step + ' (pick)' : r.step })), [
+  tableAt('candidates', M.candidates.map(r => Object.assign({}, r, { run: gfsRun(r.run), step: r.pick ? t('{0} (pick)', r.step) : r.step })), [
     { key: 'run', label: 'Run' }, { key: 'step', label: 'Step' }, { key: 'fss', label: 'Ensemble FSS ↑', num: true },
     { key: 'crps', label: 'CRPS ↓', num: true }, { key: 'csi', label: 'CSI-M ↑', num: true },
     { key: 'mae', label: 'MAE ↓', num: true }, { key: 'ratio', label: 'Rain ratio', num: true }]);
@@ -965,7 +1041,7 @@ const CHART_METRICS = [
   { key: 'pod',  label: 'POD-M',    better: 'higher' },
   { key: 'far',  label: 'FAR-M',    better: 'lower'  },
   { key: 'csi',  label: 'CSI-M',    better: 'higher' },
-  { key: 'fss',  label: 'Ens. FSS', better: 'higher' },
+  { key: 'fss',  label: t('Ens. FSS'), better: 'higher' },
   { key: 'crps', label: 'CRPS',     better: 'lower'  }
 ];
 
@@ -1051,7 +1127,7 @@ function relativeChart(mount, familyKey) {
           const b = mount.getBoundingClientRect();
           tip.innerHTML = `<b>${modelLabel(row.model)}</b><br>${m.label}: ${row[m.key].toFixed(4)}`
             + `<br>IFS: ${ref[m.key].toFixed(4)}`
-            + `<br><b>${g >= 0 ? '+' : ''}${(g * 100).toFixed(1)}%</b> ${g >= 0 ? 'better' : 'worse'} than IFS`;
+            + '<br>' + t(g >= 0 ? '{0} better than IFS' : '{0} worse than IFS', `<b>${g >= 0 ? '+' : ''}${(g * 100).toFixed(1)}%</b>`);
           tip.style.left = (e.clientX - b.left) + 'px';
           tip.style.top = (e.clientY - b.top) + 'px';
           tip.classList.add('on');
@@ -1096,8 +1172,8 @@ function relativeChart(mount, familyKey) {
    rain each model produces, and in how many places. IFS is shown as a bar
    here rather than as the baseline, because the baseline is the observation. */
 const RATIO_METRICS = [
-  { key: 'ratio', label: 'Rain ratio' },
-  { key: 'fbias', label: 'Frequency bias' }
+  { key: 'ratio', label: t('Rain ratio') },
+  { key: 'fbias', label: t('Frequency bias') }
 ];
 
 function ratioChart(mount, familyKey) {
@@ -1133,7 +1209,7 @@ function ratioChart(mount, familyKey) {
       stroke: 'var(--ink-2)', 'stroke-width': 1.5, 'stroke-dasharray': '5 4'
     }));
     const tgt = svgEl('text', { x: W - R, y: y(1) - 7, 'text-anchor': 'end', class: 'chart-target' });
-    tgt.textContent = '1.0 = same as observed';
+    tgt.textContent = t('1.0 = same as observed');
     svg.append(tgt);
 
     const gw = pw / RATIO_METRICS.length;
@@ -1151,7 +1227,7 @@ function ratioChart(mount, familyKey) {
           const b = mount.getBoundingClientRect();
           const off = ((v - 1) * 100).toFixed(1);
           tip.innerHTML = `<b>${modelLabel(row.model)}</b><br>${m.label}: ${v.toFixed(4)}`
-            + `<br>${v >= 1 ? 'produces ' + off + '% more' : 'produces ' + Math.abs(off) + '% less'} than observed`;
+            + '<br>' + (v >= 1 ? t('produces {0}% more than observed', off) : t('produces {0}% less than observed', Math.abs(off)));
           tip.style.left = (e.clientX - b.left) + 'px';
           tip.style.top = (e.clientY - b.top) + 'px';
           tip.classList.add('on');
@@ -1167,7 +1243,7 @@ function ratioChart(mount, familyKey) {
     svg.append(svgEl('line', { x1: L, x2: L, y1: T, y2: T + ph, stroke: 'var(--line)', 'stroke-width': 1 }));
     const ylab = svgEl('text', { x: 14, y: T + ph / 2, 'text-anchor': 'middle', class: 'chart-axis',
                                  transform: `rotate(-90 14 ${T + ph / 2})` });
-    ylab.textContent = 'model \u00f7 observed';
+    ylab.textContent = t('model \u00f7 observed');
     svg.append(ylab);
     mount.append(svg);
 
@@ -1206,18 +1282,18 @@ const LEAD_METRICS = [
   { key: 'csi',   label: 'CSI-M' },
   { key: 'pod',   label: 'POD-M' },
   { key: 'far',   label: 'FAR-M' },
-  { key: 'fss',   label: 'Ensemble FSS' },
+  { key: 'fss',   label: t('Ensemble FSS') },
   { key: 'mae',   label: 'MAE' },
   { key: 'crps',  label: 'CRPS' },
-  { key: 'fbias', label: 'Frequency bias' },
-  { key: 'ratio', label: 'Rain ratio' }
+  { key: 'fbias', label: t('Frequency bias') },
+  { key: 'ratio', label: t('Rain ratio') }
 ];
 
 const THRESHOLD_METRICS = [
   { key: 'csi',   label: 'CSI' },
   { key: 'pod',   label: 'POD' },
   { key: 'far',   label: 'FAR' },
-  { key: 'fbias', label: 'Frequency bias' }
+  { key: 'fbias', label: t('Frequency bias') }
 ];
 
 function picker(label, options, value, onChange) {
@@ -1247,10 +1323,10 @@ function seriesChart(mount, cfg) {
     mount.style.position = 'relative';
 
     const bar = el('div', 'chart-controls');
-    bar.append(picker('Metric', cfg.metrics.map(m => ({ value: m.key, label: m.label })),
+    bar.append(picker(t('Metric'), cfg.metrics.map(m => ({ value: m.key, label: m.label })),
                       state.metric, v => { state.metric = v; draw(); }));
     if (cfg.intervals.length > 1) {
-      bar.append(picker('Interval', cfg.intervals.map(i => ({ value: i, label: i === '30min' ? '30 minutes' : '3 hours' })),
+      bar.append(picker(t('Interval'), cfg.intervals.map(i => ({ value: i, label: t(i === '30min' ? '30 minutes' : '3 hours') })),
                         state.interval, v => { state.interval = v; draw(); }));
     }
     mount.append(bar);
@@ -1361,8 +1437,8 @@ function leadChart(mount, key) {
   seriesChart(mount, {
     family, rows, intervals, metrics: LEAD_METRICS, models,
     xKey: 'lead', ordinal: false,
-    xLabel: 'Forecast lead time (hours after the forecast was issued)',
-    xLabelShort: 'Lead', formatX: v => v + ' h'
+    xLabel: t('Forecast lead time (hours after the forecast was issued)'),
+    xLabelShort: t('Lead'), formatX: v => v + ' h'
   });
 }
 
@@ -1374,8 +1450,8 @@ function thresholdChart(mount, key) {
   seriesChart(mount, {
     family, rows, intervals, metrics: THRESHOLD_METRICS, models,
     xKey: 'threshold_mmh', ordinal: true,
-    xLabel: 'Rainfall threshold (mm per hour)',
-    xLabelShort: 'Threshold', formatX: v => v + ' mm/h'
+    xLabel: t('Rainfall threshold (mm per hour)'),
+    xLabelShort: t('Threshold'), formatX: v => v + ' mm/h'
   });
 }
 
@@ -1392,23 +1468,23 @@ function fssGridTable(mount, family) {
   const draw = () => {
     mount.innerHTML = '';
     const bar = el('div', 'chart-controls');
-    bar.append(picker('Model', models.map(m => ({ value: m, label: plainLabel(m) })), state.model,
+    bar.append(picker(t('Model'), models.map(m => ({ value: m, label: plainLabel(m) })), state.model,
                       v => { state.model = v; draw(); }));
     if (state.model !== 'IFS') {
-      bar.append(picker('Show', [{ value: 'diff', label: 'Difference from IFS' }, { value: 'value', label: 'FSS value' }],
+      bar.append(picker(t('Show'), [{ value: 'diff', label: t('Difference from IFS') }, { value: 'value', label: t('FSS value') }],
                         state.mode, v => { state.mode = v; draw(); }));
     }
     mount.append(bar);
 
     const diff = state.mode === 'diff' && state.model !== 'IFS';
     const g = grids[state.model], ref = grids.IFS;
-    const t = el('table', 'fss-grid');
-    mount.dataset.key = diff ? 'Blue cells: better than IFS; orange cells: worse.' : 'Darker cells: higher FSS.';
+    const table = el('table', 'fss-grid');
+    mount.dataset.key = t(diff ? 'Blue cells: better than IFS; orange cells: worse.' : 'Darker cells: higher FSS.');
     const cap = mount._caption;
     const key = cap && cap.querySelector('.cap-key');
     if (key) key.textContent = ' ' + mount.dataset.key;
     const hr = el('tr');
-    hr.append(el('th', null, 'Threshold'));
+    hr.append(el('th', null, t('Threshold')));
     M.fssScales.forEach(s => hr.append(el('th', 'num', s + ' km')));
     const thead = el('thead');
     thead.append(hr);
@@ -1429,9 +1505,9 @@ function fssGridTable(mount, family) {
       });
       tb.append(tr);
     });
-    t.append(thead, tb);
+    table.append(thead, tb);
     const wrap = el('div', 'tw');
-    wrap.append(t);
+    wrap.append(table);
     mount.append(cap ? exhibit(cap, wrap) : wrap);
   };
   draw();
@@ -1464,6 +1540,11 @@ document.addEventListener('DOMContentLoaded', openTarget);
 document.addEventListener('click', event => {
   const link = event.target.closest('a[href^="#"]');
   if (link && link.getAttribute('href').length > 1) openBox(document.querySelector(link.getAttribute('href')));
+});
+// The language switch keeps the reader's place: index.html#methods opens index.ko.html#methods.
+document.addEventListener('click', event => {
+  const link = event.target.closest('a.lang-toggle');
+  if (link) link.hash = location.hash;
 });
 if (testsMenu) {
   testsMenu.querySelectorAll('a').forEach(link => link.addEventListener('click', () => { testsMenu.open = false; }));

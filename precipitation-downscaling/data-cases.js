@@ -5,6 +5,8 @@ window.CASES = [
   "id": "case-01",
   "label": "Light rain",
   "title": "Light spring rain",
+  "label_ko": "약한 비",
+  "title_ko": "봄철 약한 비",
   "window": [
    "2025-05-10T12:00Z",
    "2025-05-11T12:00Z"
@@ -359,6 +361,8 @@ window.CASES = [
   "id": "case-02",
   "label": "Spring rain",
   "title": "Moderate spring rain",
+  "label_ko": "봄비",
+  "title_ko": "봄철 보통 비",
   "window": [
    "2025-05-08T12:00Z",
    "2025-05-09T12:00Z"
@@ -713,6 +717,8 @@ window.CASES = [
   "id": "case-03",
   "label": "Seosan record",
   "title": "Seosan record rainfall (114.9 mm/h)",
+  "label_ko": "Seosan 기록",
+  "title_ko": "Seosan 기록적 강수 (114.9 mm/h)",
   "window": [
    "2025-07-16T00:00Z",
    "2025-07-17T00:00Z"
@@ -1067,6 +1073,8 @@ window.CASES = [
   "id": "case-04",
   "label": "Dry",
   "title": "Dry winter day",
+  "label_ko": "건조",
+  "title_ko": "건조한 겨울날",
   "window": [
    "2025-02-19T12:00Z",
    "2025-02-20T12:00Z"
@@ -1421,6 +1429,8 @@ window.CASES = [
   "id": "case-05",
   "label": "Gunsan record",
   "title": "Gunsan record downpour (152 mm/h)",
+  "label_ko": "Gunsan 기록",
+  "title_ko": "Gunsan 기록적 폭우 (152 mm/h)",
   "window": [
    "2025-09-06T00:00Z",
    "2025-09-07T00:00Z"
@@ -1775,6 +1785,8 @@ window.CASES = [
   "id": "case-06",
   "label": "Convective",
   "title": "Moderate convective rain",
+  "label_ko": "대류성",
+  "title_ko": "보통 대류성 비",
   "window": [
    "2025-07-21T00:00Z",
    "2025-07-22T00:00Z"
@@ -2129,6 +2141,8 @@ window.CASES = [
   "id": "case-01",
   "label": "Feb wet",
   "title": "Wet day selected from IFS",
+  "label_ko": "2월 강수일",
+  "title_ko": "IFS에서 고른 강수일",
   "window": [
    "2025-02-21T00:00Z",
    "2025-02-22T00:00Z"
@@ -2343,6 +2357,8 @@ window.CASES = [
   "id": "case-02",
   "label": "May wet",
   "title": "Wet day selected from IFS",
+  "label_ko": "5월 강수일",
+  "title_ko": "IFS에서 고른 강수일",
   "window": [
    "2025-05-27T00:00Z",
    "2025-05-28T00:00Z"
@@ -2557,6 +2573,8 @@ window.CASES = [
   "id": "case-03",
   "label": "Jul wet",
   "title": "Wet day selected from IFS",
+  "label_ko": "7월 강수일",
+  "title_ko": "IFS에서 고른 강수일",
   "window": [
    "2025-07-06T00:00Z",
    "2025-07-07T00:00Z"
@@ -2771,6 +2789,8 @@ window.CASES = [
   "id": "case-04",
   "label": "Aug wet",
   "title": "Wet day selected from IFS",
+  "label_ko": "8월 강수일",
+  "title_ko": "IFS에서 고른 강수일",
   "window": [
    "2025-08-18T00:00Z",
    "2025-08-19T00:00Z"
@@ -2985,6 +3005,8 @@ window.CASES = [
   "id": "case-05",
   "label": "Oct wet",
   "title": "Wet day selected from IFS",
+  "label_ko": "10월 강수일",
+  "title_ko": "IFS에서 고른 강수일",
   "window": [
    "2025-10-21T12:00Z",
    "2025-10-22T12:00Z"
@@ -3199,6 +3221,8 @@ window.CASES = [
   "id": "case-06",
   "label": "Dec wet",
   "title": "Wet day selected from IFS",
+  "label_ko": "12월 강수일",
+  "title_ko": "IFS에서 고른 강수일",
   "window": [
    "2025-12-19T00:00Z",
    "2025-12-20T00:00Z"
@@ -3413,6 +3437,8 @@ window.CASES = [
   "id": "daet",
   "label": "Trami",
   "title": "Tropical Storm Trami (Kristine), Daet",
+  "label_ko": "Trami",
+  "title_ko": "열대폭풍 Trami (Kristine), Daet",
   "window": [
    "2024-10-22T00:00Z",
    "2024-10-23T00:00Z"
@@ -3737,6 +3763,8 @@ window.CASES = [
   "id": "baler",
   "label": "Baler",
   "title": "Convective rain, Baler",
+  "label_ko": "Baler",
+  "title_ko": "대류성 비, Baler",
   "window": [
    "2024-08-27T00:00Z",
    "2024-08-28T00:00Z"
@@ -4061,6 +4089,8 @@ window.CASES = [
   "id": "daet-late",
   "label": "Trami, late",
   "title": "Trami (Kristine), late stage",
+  "label_ko": "Trami, 후반",
+  "title_ko": "Trami (Kristine), 후반 단계",
   "window": [
    "2024-10-24T00:00Z",
    "2024-10-25T00:00Z"
@@ -4385,6 +4415,8 @@ window.CASES = [
   "id": "ghana",
   "label": "Test day",
   "title": "Workflow test day",
+  "label_ko": "시험일",
+  "title_ko": "워크플로 시험일",
   "window": [
    "2024-10-22T00:00Z",
    "2024-10-23T00:00Z"
@@ -4599,6 +4631,8 @@ window.CASES = [
   "id": "ghana-wet",
   "label": "Wet day",
   "title": "Wettest IFS day of 2025",
+  "label_ko": "강수일",
+  "title_ko": "2025년 IFS 최다 강수일",
   "window": [
    "2025-10-08T00:00Z",
    "2025-10-09T00:00Z"
@@ -4813,6 +4847,8 @@ window.CASES = [
   "id": "tonga-storm",
   "label": "May storm",
   "title": "Low-pressure storm, heavy rain, and gales",
+  "label_ko": "5월 폭풍",
+  "title_ko": "저기압 폭풍, 호우와 강풍",
   "window": [
    "2025-05-11T00:00Z",
    "2025-05-12T00:00Z"

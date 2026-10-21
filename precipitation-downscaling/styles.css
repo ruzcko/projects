@@ -895,11 +895,18 @@ details.supp > .supp-body > .viewer { max-width: none; }
   .nav-in { justify-content: center; padding-inline: 170px; }
   .nav a.nav-brand { position: absolute; left: 18px; top: 0; bottom: 0; margin-block: 0; }
   #themeToggle { position: absolute; right: 12px; top: 0; bottom: 0; margin: auto 0; }
+  .nav a.lang-toggle { position: absolute; right: 56px; top: 0; bottom: 0; height: 44px; margin: auto 0; }
 }
+/* 701-999 px: the tabs sit centred between the brand and the right-hand group (language link, if any, and theme switch) */
 @media (min-width: 701px) and (max-width: 999px) {
   .nav-in > .nav-brand + * { margin-left: auto; }
-  .nav-in > :nth-last-child(2) { margin-right: auto; }
+  .nav-in > :nth-last-child(2):not(.lang-toggle),
+  .nav-in > :nth-last-child(3):has(+ .lang-toggle) { margin-right: auto; }
   #themeToggle { margin-left: 0; }
+}
+/* 701-960 px: with the language link the bar is full, so the brand shows the D mark only */
+@media (min-width: 701px) and (max-width: 960px) {
+  .nav-in:has(.lang-toggle) .nav-brand .nav-code { display: none; }
 }
 
 /* ---------- Footer logo (2026-10-21): between the credit line and the copyright line ---------- */
@@ -934,3 +941,40 @@ details.refs > summary:focus-visible { outline: 2px solid var(--accent); outline
 details.refs > .references { margin-top: 10px; }
 @media (max-width: 700px) { details.refs > summary { font-size: 18px; } }
 @media (prefers-reduced-motion: reduce) { details.refs > summary::before { transition: none; } }
+
+/* ---------- Korean version (2026-10-21): IBM Plex Sans KR for Hangul next to Hanken Grotesk; Korean words never break mid-word ---------- */
+html:lang(ko) { --sans: "Hanken Grotesk", "IBM Plex Sans KR", sans-serif; }
+html:lang(ko) body { word-break: keep-all; }
+
+/* ---------- Touch and phone bar (2026-10-21) ---------- */
+/* No grey square on tap; keyboard focus keeps its outline. */
+html { -webkit-tap-highlight-color: transparent; }
+/* The public page's phone bar names the current section: its item widens from the icon to icon + name. */
+@media (max-width: 700px) {
+  .nav-expand .nav-label { display: inline-block; max-width: 0; overflow: hidden; white-space: nowrap; opacity: 0;
+    font-size: 13px; transition: max-width .25s ease, opacity .2s ease; }
+  .nav-expand a, .nav-expand .nav-tests summary { gap: 0; transition: padding .25s ease, gap .25s ease; }
+  .nav-expand a.is-active, .nav-expand .nav-tests summary.is-active { width: auto; padding: 0 12px; gap: 6px; }
+  .nav-expand a.is-active .nav-label, .nav-expand .nav-tests summary.is-active .nav-label { max-width: 110px; opacity: 1; }
+}
+@media (max-width: 700px) and (prefers-reduced-motion: reduce) {
+  .nav-expand .nav-label, .nav-expand a, .nav-expand .nav-tests summary { transition: none; }
+}
+
+/* ---------- Language switch (2026-10-21): "English | 한국어" with the current language highlighted; the whole control
+   links to the other language. Narrower bars show "EN | 한". ---------- */
+.nav a.lang-toggle { gap: 0; padding-inline: 10px; white-space: nowrap; font-family: "Hanken Grotesk", "IBM Plex Sans KR", sans-serif; }
+.lang-toggle .lang-sep { margin-inline: 6px; color: var(--ink-3); }
+.lang-toggle .is-current { color: var(--accent); font-weight: 600; }
+.lang-toggle .lang-short { display: none; }
+@media (min-width: 1100px) {
+  .nav-in:has(.lang-toggle) { padding-inline: 200px; }
+}
+@media (max-width: 1099px) {
+  .lang-toggle .lang-long { display: none; }
+  .lang-toggle .lang-short { display: inline; }
+}
+@media (max-width: 700px) {
+  .nav a.lang-toggle { width: auto; min-width: 44px; padding-inline: 4px; font-size: 12px; }
+  .lang-toggle .lang-sep { margin-inline: 3px; }
+}
